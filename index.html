@@ -1,0 +1,2122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#D9006C"/> <title>Planificateur d'horaire</title>
+
+    <style>
+        /* Styles CSS (Thème Rose/Fuchsia avec Soir Mauve) */
+        :root {
+            /* --- Palette Rose/Fuchsia --- */
+            --rose-principal: #D9006C;  /* Fuchsia/Rose Vif */
+            --rose-moyen: #FF69B4;     /* HotPink - Rose Moyen */
+            --rose-clair: #FFB6C1;     /* LightPink - Rose Clair */
+            --rose-pale: #FFF0F5;      /* LavenderBlush - Rose Très Pâle */
+            --rose-semi-transparent: rgba(217, 0, 108, 0.1); /* Rose principal semi-transparent */
+
+            /* --- Couleur Soir (Mauve) --- */
+            --mauve-soir: #BA55D3;     /* MediumOrchid - Mauve */
+            --mauve-soir-fond: rgba(186, 85, 211, 0.1); /* Mauve pâle semi-transparent */
+
+            /* --- Autres couleurs (conservées ou ajustées) --- */
+            --bleu-matin: #007bff;     /* Bleu Matin (conservé pour distinction) */
+            --bleu-matin-fond: rgba(0, 123, 255, 0.1);
+            --vert-ok: #28a745;
+            --rouge-nok: #dc3545;
+            --gris-verif: #eee;
+            --gris-bordure: #ccc;
+            --gris-neutre-bouton: #6c757d;
+            --gris-neutre-bouton-hover: #5a6268;
+            --drop-zone-bg: #e9f5ff;
+            --dragging-opacity: 0.5;
+        }
+        /* Le reste du CSS utilise maintenant les variables --rose-* et --mauve-* */
+        body { font-family: Arial, sans-serif; background-color: #FFF5F9; /* Léger fond rosé */ color: #333; margin: 20px; padding-bottom: 80px; }
+        .container { max-width: 95%; margin: 0 auto; padding: 20px; background-color: white; border-radius: 8px; box-shadow: 0 0 15px var(--rose-semi-transparent); }
+        h1, h2 { color: var(--rose-principal); border-bottom: 2px solid var(--rose-clair); padding-bottom: 5px; }
+        table { border-collapse: collapse; margin: 20px 0; box-shadow: 0 0 10px var(--rose-semi-transparent); width: 100%; background-color: white; /* Important for html2canvas */ }
+        th { background-color: var(--rose-moyen); color: white; padding: 10px; text-align: center; position: sticky; top: 0; z-index: 2; }
+        td { padding: 8px; background-color: white; vertical-align: middle; border: 1px solid #eee; }
+
+        /* Tableaux Désidératats & Compétences/Aptitudes */
+        #tableau-désidératats tbody tr td,
+        #tableau-désidératats-soir tbody tr td { vertical-align: middle; }
+        #tableau-désidératats tbody tr:nth-child(even) td,
+        #tableau-désidératats-soir tbody tr:nth-child(even) td { background-color: var(--rose-pale); }
+        #tableau-Listes, #tableau-aptitudes-soir { border-collapse: separate; border-spacing: 10px; }
+        #tableau-Listes th, #tableau-Listes td, #tableau-aptitudes-soir th, #tableau-aptitudes-soir td {
+            padding: 10px;
+            text-align: center;
+            border: none;
+            background-color: transparent; /* For canvas capture */
+        }
+        /* --- AJOUT POUR CORRIGER COULEUR ENTETE COMPETENCES --- */
+        #tableau-Listes th,
+        #tableau-aptitudes-soir th {
+            color: var(--rose-principal); /* Met le texte en rose principal */
+            font-weight: bold;
+        }
+        /* --- FIN AJOUT --- */
+        #tableau-Listes td:first-child, #tableau-aptitudes-soir td:first-child { text-align: left; min-width: 150px; font-weight: bold; }
+        #tableau-Listes label, #tableau-aptitudes-soir label { display: inline-flex; align-items: center; justify-content: center; margin: 0 10px; padding: 8px 12px; background-color: var(--rose-pale); border-radius: 4px; transition: background-color 0.3s; white-space: nowrap; cursor: pointer; }
+        #tableau-Listes label:hover, #tableau-aptitudes-soir label:hover { background-color: var(--rose-clair); }
+        #tableau-Listes input[type="checkbox"], #tableau-aptitudes-soir input[type="checkbox"] { margin-right: 8px; accent-color: var(--rose-principal); cursor: pointer; transform: scale(1.2); }
+        #tableau-désidératats select, #tableau-désidératats-soir select { padding: 5px 2px; border: 1px solid #ccc; border-radius: 3px; background-color: white; width: 90%; box-sizing: border-box; text-align: center; -moz-appearance: none; -webkit-appearance: none; appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23007CB2%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 5px center; background-size: 10px 10px; padding-right: 20px; cursor: pointer; color: #333; font-weight: normal; }
+        #tableau-désidératats select:focus, #tableau-désidératats-soir select:focus { outline: 2px solid var(--rose-principal); border-color: var(--rose-principal); }
+        /* Style du select basé sur sa valeur */
+        #tableau-désidératats select[style*="bold"],
+        #tableau-désidératats-soir select[style*="bold"] { font-weight: bold; }
+        #tableau-désidératats select[style*="red"],
+        #tableau-désidératats-soir select[style*="red"] { color: var(--rouge-nok); }
+        #tableau-désidératats select[style*="green"],
+        #tableau-désidératats-soir select[style*="green"] { color: var(--vert-ok); }
+
+        #tableau-désidératats th, #tableau-désidératats td,
+        #tableau-désidératats-soir th, #tableau-désidératats-soir td { white-space: nowrap; width: 40px; text-align: center; padding: 2px; height: 40px; vertical-align: middle; }
+
+        /* Colonne Nom Collaborateur dans Désidératats (ajustement largeur et flex) */
+        #tableau-désidératats th:first-child, #tableau-désidératats td:first-child,
+        #tableau-désidératats-soir th:first-child, #tableau-désidératats-soir td:first-child {
+            width: auto; min-width: 200px; /* Augmenté pour les boutons */
+            text-align: left; white-space: normal; font-weight: bold; padding-left: 8px; position: sticky; left: 0; background-color: inherit; /* Canvas fix */ z-index: 1;
+            display: flex; /* Pour aligner nom et boutons */
+            align-items: center; /* Centrer verticalement */
+            justify-content: space-between; /* Espace entre nom et groupe de boutons */
+        }
+        #tableau-désidératats th:first-child, #tableau-désidératats-soir th:first-child {
+            z-index: 3; background-color: var(--rose-moyen); justify-content: flex-start; /* Header simple */
+        }
+        /* Ensure sticky column background is captured correctly by html2canvas */
+         #tableau-désidératats td:first-child,
+         #tableau-désidératats-soir td:first-child {
+            background-color: white; /* Default light background */
+         }
+         #tableau-désidératats tbody tr:nth-child(even) td:first-child,
+         #tableau-désidératats-soir tbody tr:nth-child(even) td:first-child {
+            background-color: var(--rose-pale); /* Match row background */
+         }
+
+        /* Conteneur pour les boutons V, ?, X */
+        .button-group-desiderata {
+            display: inline-flex; /* Aligner les boutons horizontalement */
+            gap: 4px; /* Espace entre les boutons */
+            margin-left: 8px; /* Espace entre le nom et les boutons */
+        }
+
+        /* Style commun pour les boutons V, ?, X */
+        .btn-desiderata {
+            padding: 2px 6px; /* Taille standard */
+            font-size: 11px; /* Taille police */
+            font-weight: bold;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            line-height: 1.2; /* Ajustement hauteur */
+            min-width: 18px; /* Largeur minimale pour V/?/X */
+            text-align: center;
+        }
+        h2 span.btn-desiderata {
+            vertical-align: middle; /* Essaie cette valeur en premier */
+        /* Ajuste légèrement si besoin, exemple : */
+        /* vertical-align: -2px; */ /* Déplace vers le haut de 2px */
+        /* vertical-align: text-bottom; */ /* Autre option à tester */
+        }
+        /* Style spécifique bouton V */
+        .btn-desiderata.btn-v { background-color: var(--vert-ok); }
+        .btn-desiderata.btn-v:hover { background-color: #218838; }
+
+        /* Style spécifique bouton ? */
+        .btn-desiderata.btn-interro { background-color: var(--gris-neutre-bouton); }
+        .btn-desiderata.btn-interro:hover { background-color: var(--gris-neutre-bouton-hover); }
+
+        /* Style spécifique bouton X */
+        .btn-desiderata.btn-x { background-color: var(--rouge-nok); }
+        .btn-desiderata.btn-x:hover { background-color: #c82333; }
+
+        /* Styles Planning Matin & Soir (Séparés) */
+        .Liste-assigne { /* Utilisé pour identifier les cellules assignées */ }
+        #tableau-emploi-du-temps td.Liste-assigne { font-weight: bold; color: var(--bleu-matin); } /* Matin reste bleu */
+        #tableau-emploi-du-temps-soir td.Liste-assigne { font-weight: bold; color: var(--mauve-soir); } /* <<< Soir utilise la nouvelle variable mauve */
+        #tableau-emploi-du-temps th.weekend, #tableau-emploi-du-temps td.weekend,
+        #tableau-emploi-du-temps-soir th.weekend, #tableau-emploi-du-temps-soir td.weekend,
+        #tableau-combiné th.weekend, #tableau-combiné td.weekend { background-color: var(--rose-clair) !important; } /* Weekend avec rose clair */
+
+        /* Style Repos commun */
+        .repos { color: var(--rouge-nok); font-weight: bold; text-align: center; }
+        #tableau-emploi-du-temps td.weekend.repos,
+        #tableau-emploi-du-temps-soir td.weekend.repos,
+        #tableau-combiné td.weekend span.repos { background-color: var(--rose-clair) !important; } /* Repos sur weekend rose */
+        #tableau-emploi-du-temps td.repos:not(.weekend),
+        #tableau-emploi-du-temps-soir td.repos:not(.weekend),
+        #tableau-combiné td:not(.weekend) span.repos { background-color: white !important; } /* Repos sur jour normal blanc */
+
+        /* Colonnes Sticky (Nom + Jrs/Labels Verif) */
+        #tableau-emploi-du-temps th:nth-child(1), #tableau-emploi-du-temps td:nth-child(1),
+        #tableau-emploi-du-temps-soir th:nth-child(1), #tableau-emploi-du-temps-soir td:nth-child(1),
+        #tableau-combiné th:nth-child(1), #tableau-combiné td:nth-child(1) {
+            position: sticky; left: 0; background-color: white; /* Explicit BG */ z-index: 1; min-width: 110px; font-weight: bold; white-space: normal;
+            border-right: 2px solid var(--gris-bordure);
+        }
+         /* Colonne Jours travaillés (Matin/Soir séparés) */
+        #tableau-emploi-du-temps th:nth-child(2), #tableau-emploi-du-temps td:nth-child(2),
+        #tableau-emploi-du-temps-soir th:nth-child(2), #tableau-emploi-du-temps-soir td:nth-child(2) {
+            background-color: var(--rose-pale); /* Explicit BG using new pale pink */ font-weight: bold; width: 40px; text-align: center; padding: 8px 2px; position: sticky; left: 110px; /* Ajuster si la 1ere col est plus large */ z-index: 1;
+            border-right: 1px solid var(--gris-bordure);
+        }
+         /* Colonne label vérification (Matin/Soir séparés + Combiné) */
+        #tableau-emploi-du-temps tr.verification-row td:nth-child(1),
+        #tableau-emploi-du-temps-soir tr.verification-row td:nth-child(1),
+        #tableau-combiné tr.verification-row td:nth-child(1) {
+            position: sticky; left: 0; z-index: 1; background-color: var(--gris-verif) !important; /* Explicit BG (Gris conservé pour contraste) */
+            font-weight: bold; text-align: left; padding-left: 8px; min-width: 110px;
+            border-right: 2px solid var(--gris-bordure);
+        }
+         /* Data cells in verification row */
+         #tableau-emploi-du-temps tr.verification-row td:not(:nth-child(1)),
+         #tableau-emploi-du-temps-soir tr.verification-row td:not(:nth-child(1)),
+         #tableau-combiné tr.verification-row td:not(:nth-child(1)) {
+            background-color: var(--gris-verif); /* Explicit BG (Gris conservé) */
+         }
+          /* Weekend verification cells */
+          #tableau-emploi-du-temps tr.verification-row td.weekend,
+          #tableau-emploi-du-temps-soir tr.verification-row td.weekend,
+          #tableau-combiné tr.verification-row td.weekend {
+             background-color: #f5e6ea !important; /* Explicit BG: Weekend Verif (Rose très pale/grisâtre) */
+          }
+
+        /* Ajustement largeur et style cellules jours (Matin/Soir séparés) */
+        #tableau-emploi-du-temps th:not(:nth-child(1)):not(:nth-child(2)),
+        #tableau-emploi-du-temps-soir th:not(:nth-child(1)):not(:nth-child(2)) {
+            min-width: 18px; /* <-- Réduit */
+        }
+        #tableau-emploi-du-temps td:not(:nth-child(1)):not(:nth-child(2)),
+        #tableau-emploi-du-temps-soir td:not(:nth-child(1)):not(:nth-child(2)) {
+            font-size: 13px; /* ou 10px */
+            padding: 6px 1px; /* <-- Padding horizontal réduit */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-align: center;
+            height: 40px;
+        }
+         /* Ligne Vérification (communs) */
+        tr.verification-row { font-size: 10px; height: 20px; }
+        tr.verification-row td { font-weight: bold; text-align: center; padding: 2px; border-bottom: 1px solid var(--gris-bordure); vertical-align: middle; }
+        tr.verification-row td.ok { color: var(--vert-ok); }
+        tr.verification-row td.nok { color: var(--rouge-nok); }
+
+         /* Tableau Combiné spécifique */
+         #tableau-combiné th {
+            min-width: 18px; /* <-- Réduit */
+            font-size: 11px;
+         }
+         #tableau-combiné td {
+            font-size: 13px;
+            padding: 2px 1px; /* <-- Padding horizontal réduit */
+            text-align: center; /* Alignement géré par div/span */
+            vertical-align: top;
+            height: 40px;
+            line-height: 1.3;
+         }
+         #tableau-combiné td div { margin-bottom: 2px; }
+         #tableau-combiné td div.assign-matin { color: var(--bleu-matin); font-weight: bold; text-align: center; cursor: grab; } /* Matin reste bleu */
+         #tableau-combiné td div.assign-soir { color: var(--mauve-soir); text-align: center; cursor: grab; } /* <<< Soir utilise la nouvelle variable mauve */
+         #tableau-combiné td span.repos { color: var(--rouge-nok); font-weight: bold; display: block; text-align: center; /* Centrer le X */ }
+        /* Weekend déjà géré plus haut */
+         #tableau-combiné tr.verification-row td { height: 20px; }
+         #tableau-combiné tr.verification-row.verif-matin td { border-bottom-style: dashed; }
+         #tableau-combiné tr.verification-row.verif-soir td { border-bottom-style: solid; }
+
+         /* Style Cellule éditable pour le tableau combiné (Clic Soir) */
+         #tableau-combiné td.editable { cursor: pointer; }
+         #tableau-combiné td.editable:hover { background-color: #f0f0f0; outline: 1px dashed #aaa; }
+
+         /* *** D&D: Styles visuels pour le drag and drop *** */
+         #tableau-combiné td.drop-allowed { background-color: var(--drop-zone-bg) !important; outline: 2px dashed var(--bleu-matin); } /* Drop zone reste bleu pour contraste */
+         .dragging { opacity: var(--dragging-opacity); border: 1px dashed #333; } /* Ajout d'une bordure pour mieux voir */
+
+
+        /* Menus, Boutons, Overlay etc (Adaptés au thème Rose) */
+        select#select-mois { padding: 8px 12px; border: 1px solid var(--rose-moyen); border-radius: 4px; background-color: white; color: #333; font-size: 16px; margin: 0 20px 20px 5px; }
+        select#select-mois:focus { outline: none; border-color: var(--rose-principal); box-shadow: 0 0 0 2px var(--rose-semi-transparent); }
+        .menu-collaborateurs { position: relative; display: inline-block; margin: 15px 10px 15px 0; }
+        .menu-btn { padding: 10px 15px; background-color: var(--rose-moyen); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        .menu-btn:hover { background-color: var(--rose-principal); }
+        .menu-content { display: none; position: absolute; background-color: white; min-width: 300px; box-shadow: 0 8px 16px rgba(0,0,0,0.2); z-index: 10; border-radius: 4px; padding: 15px; right: 0; bottom: auto; top: 100%; margin-top: 2px; }
+        /* .menu-content.show est défini plus bas, après #menu-reset-content */
+        .menu-section { margin-bottom: 15px; }
+        .menu-section:last-child { margin-bottom: 0; }
+        .menu-section h3 { margin-top: 0; margin-bottom: 8px; color: var(--rose-principal); font-size: 16px; }
+        .menu-input { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        .menu-action-btn { padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; margin-right: 5px; }
+        .btn-ajouter { background-color: #4CAF50; color: white; }
+        .btn-supprimer { background-color: #f44336; color: white; }
+        .menu-action-btn:hover { opacity: 0.9; }
+
+        /* --- Conteneur Réinitialiser (MODIFIÉ: Fixe en bas à GAUCHE) --- */
+        .menu-reset-container {
+            position: fixed;    /* Garde la position fixe */
+            bottom: 20px;
+            left: 20px;     /* MODIFIÉ: Positionné à gauche */
+            z-index: 10;
+        }
+        .menu-reset-btn { padding: 10px 15px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .menu-reset-btn:hover { background-color: #c82333; }
+
+        /* --- Conteneur Regénérer (AJOUTÉ: Fixe en bas à DROITE) --- */
+        #regenerate-container {
+            position: fixed; /* Pour le faire flotter */
+            bottom: 20px;   /* Position en bas */
+            right: 20px;    /* Position à droite */
+            z-index: 10;    /* Même niveau que Reset */
+        }
+        /* Style pour que le bouton Regénérer conserve son look */
+        #regenerate-container button {
+            font-size: 15px;
+            padding: 10px 20px;
+            background-color: var(--rose-moyen);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+            transition: background-color 0.3s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            min-width: 160px;
+        }
+        #regenerate-container button:hover {
+            background-color: var(--rose-principal);
+        }
+        /* --- Fin Styles Bouton Regénérer Flottant --- */
+
+        /* --- Contenu du Menu Réinitialiser (MODIFIÉ: Alignement à gauche) --- */
+        #menu-reset-content {
+            /* Styles essentiels copiés de .menu-content et ajustés */
+            background-color: white;
+            min-width: 250px;       /* Largeur minimale */
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            z-index: 10;            /* Au-dessus du bouton */
+            border-radius: 4px;
+            padding: 15px;
+            /* Positionnement MODIFIÉ */
+            left: 0;            /* MODIFIÉ: Aligné à gauche du conteneur */
+            bottom: 100%;       /* S'ouvre vers le haut */
+            top: auto;
+            margin-bottom: 5px;   /* Espace entre bouton et menu */
+        }
+
+        /* Règle commune pour afficher les menus (incluant #menu-reset-content) */
+        .menu-content.show {
+             display: block;
+        }
+
+        /* Styles des boutons à l'intérieur du menu Reset */
+        #menu-reset-content button {
+             display: block;
+             width: 100%;
+             padding: 10px;
+             margin-bottom: 8px;
+             text-align: left;
+             background-color: #f8f9fa;
+             border: 1px solid #dee2e6;
+             border-radius: 4px;
+             cursor: pointer;
+             font-size: 14px;
+             color: #333;
+        }
+        #menu-reset-content button:last-child { margin-bottom: 0; }
+        #menu-reset-content button:hover { background-color: #e9ecef; border-color: #adb5bd; }
+        #menu-reset-content h3 { color:var(--rose-moyen); margin-top: 0; margin-bottom: 8px; } /* Adaptation titre menu reset */
+
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.2); z-index: 5; }
+        .overlay.show { display: block; }
+        .button-group { display: flex; justify-content: center; gap: 15px; margin-top: 30px; flex-wrap: wrap; } /* Gap réduit */
+        button { font-size: 15px; padding: 10px 20px; background-color: var(--rose-moyen); color: white; border: none; border-radius: 5px; cursor: pointer; text-align: center; transition: background-color 0.3s; box-shadow: 0 2px 5px rgba(0,0,0,0.1); min-width: 160px; } /* Taille/padding/min-width réduits */
+        button:hover { background-color: var(--rose-principal); }
+        .table-container { overflow-x: auto; max-width: 100%; margin-bottom: 20px; }
+        #message-erreur-couverture, #message-erreur-couverture-soir { color: red; background-color: #ffe0e0; border: 1px solid red; padding: 10px; margin: 10px 0; border-radius: 4px; display: none; }
+        #message-info-chargement { color: #006400; background-color: #e0ffe0; border: 1px solid #006400; padding: 10px; margin: 10px 0; border-radius: 4px; display: none; text-align: center; } /* MODIF: MEMOIRE - Style pour message info */
+
+        /* Styles pour les sections repliables */
+        .collapsible-trigger {
+            cursor: pointer;
+            user-select: none; /* Empêche la sélection du texte du titre au clic */
+            padding-top: 10px; /* Un peu d'espace au dessus */
+            padding-bottom: 10px; /* Un peu d'espace en dessous */
+            transition: background-color 0.2s ease; /* Effet léger au survol */
+            position: relative; /* Pour positionner la flèche */
+            display: flex; /* Pour aligner texte et flèche */
+            justify-content: space-between; /* Espace entre titre et flèche */
+            align-items: center;
+        }
+        .collapsible-trigger:hover {
+            background-color: var(--rose-pale); /* Léger fond au survol */
+        }
+        .collapsible-trigger .arrow {
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+        .contenu-collapsible {
+            display: none; /* Masqué par défaut */
+            padding-left: 15px; /* Léger retrait du contenu */
+            border-left: 3px solid var(--rose-clair); /* Ligne visuelle à gauche */
+            margin-left: 5px; /* Marge pour aligner avec le titre */
+            margin-top: 10px; /* Espace après le titre */
+            background-color: white;
+        }
+        /* Style quand la section est active/ouverte */
+        .section-collapsible.active > .contenu-collapsible {
+            display: block; /* Afficher le contenu */
+        }
+
+        /* Style pour cacher temporairement l'overlay pendant la capture PDF */
+        .pdf-capture-mode .overlay {
+            display: none !important;
+        }
+
+        /* --- Style pour indiquer le chargement PDF (Thème Rose/Licorne) --- */
+        #pdf-export-loader {
+            display: none; /* Caché par défaut */
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 255, 255, 0.9); /* Légèrement plus opaque */
+            padding: 20px 30px;
+            border-radius: 10px; /* Arrondi un peu plus doux */
+            box-shadow: 0 5px 20px rgba(217, 0, 108, 0.3); /* Ombre rose */
+            z-index: 1001; /* Au dessus de l'overlay potentiel */
+            border: 2px solid var(--rose-moyen); /* Utilise la couleur moyenne du thème */
+            /* Ajouts pour l'image et le texte */
+            flex-direction: column; /* Empile image et texte */
+            align-items: center;  /* Centre horizontalement */
+            justify-content: center;/* Centre verticalement */
+            gap: 10px;            /* Espace entre image et texte */
+            text-align: center;
+        }
+        #pdf-export-loader img {
+            max-height: 60px; /* Ajustez la taille si besoin */
+            width: auto;     /* Garde les proportions */
+            margin-bottom: 5px; /* Petit espace sous la licorne */
+        }
+        #pdf-export-loader span {
+            font-size: 1.1em; /* Taille du texte */
+            font-weight: bold;
+            color: var(--rose-principal); /* Utilise la couleur principale du thème */
+        }
+        /* --- Fin Style Loader --- */
+
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+</head>
+<body>
+    <div class="container">
+        <h1>Planificateur d'horaire</h1>
+
+        <label for="select-mois">Mois :</label>
+        <select id="select-mois" onchange="changerMois()">
+            <option value="0">Janvier</option> <option value="1">Février</option> <option value="2">Mars</option>
+            <option value="3">Avril</option> <option value="4">Mai</option> <option value="5">Juin</option>
+            <option value="6">Juillet</option> <option value="7">Août</option> <option value="8">Septembre</option>
+            <option value="9">Octobre</option> <option value="10">Novembre</option> <option value="11">Décembre</option>
+        </select>
+
+        <div class="menu-collaborateurs">
+            <button class="menu-btn" onclick="toggleMenuCollaborateurs()">Gérer les collaborateurs</button>
+            <div id="menu-collaborateurs-content" class="menu-content">
+                <div class="menu-section"><h3>Ajouter</h3><input type="text" id="nouveau-collaborateur" class="menu-input" placeholder="Nom"><button class="menu-action-btn btn-ajouter" onclick="ajouterCollaborateur()">Ajouter</button></div> <hr style="border: none; border-top: 1px solid #eee; margin: 15px 0;"> <div class="menu-section"><h3>Supprimer</h3><select id="select-supprimer" class="menu-input"></select><button class="menu-action-btn btn-supprimer" onclick="supprimerCollaborateur()">Supprimer</button></div>
+            </div>
+        </div>
+        <div id="overlay-menus" class="overlay"></div> <div id="message-info-chargement"></div>
+
+         <div id="pdf-export-loader"></div> <div class="section-collapsible active" id="section-details-matin"> <h2 class="collapsible-trigger">Matin : Disponibilités et compétences</h2>
+            <div class="contenu-collapsible">
+                <h2>Matin (<span class="btn-desiderata btn-v">V</span>:&nbsp;Travail si compétent, <span class="btn-desiderata btn-x">X</span>:&nbsp;Repos, <span class="btn-desiderata btn-interro">?</span>:&nbsp;Indifférent)</h2>
+                <div style="margin-bottom: 15px;"> 
+                    <label for="upload-desiderata-matin">Importer Désidératats Matin (.csv):</label>
+                    <input type="file" id="upload-desiderata-matin" accept=".csv" style="display: inline-block; margin-left: 10px;">
+                    <button onclick="importerDesideratas('matin')" style="margin-left: 10px; padding: 5px 10px; font-size: 14px;">Charger Fichier Matin</button>
+                </div>
+                <div class="table-container"> <table id="tableau-désidératats"><thead><tr><th>Collab.</th></tr></thead><tbody></tbody></table> </div>
+                <h2>Compétences Matin (Listes)</h2>
+                <div class="table-container"> <table id="tableau-Listes"><thead><tr><th>Collab.</th></tr></thead><tbody></tbody></table> </div>
+            </div>
+         </div>
+
+        <div class="section-collapsible" id="section-edt-matin">
+              <h2 class="collapsible-trigger">Emploi du temps généré pour le matin</h2>
+              <div class="contenu-collapsible">
+                  <div id="message-erreur-couverture"></div>
+                  <div class="table-container"> <table id="tableau-emploi-du-temps"><thead><tr></tr></thead><tbody></tbody></table> </div>
+              </div>
+          </div>
+
+        <hr style="border: none; border-top: 3px solid var(--rose-principal); margin: 40px 0;">
+
+        <div class="section-collapsible active" id="section-details-soir"> <h2 class="collapsible-trigger">Soir : Disponibilités et compétences</h2>
+            <div class="contenu-collapsible">
+                <h2>Soir (<span class="btn-desiderata btn-v">V</span>:&nbsp;Travail si compétent, <span class="btn-desiderata btn-x">X</span>:&nbsp;Repos, <span class="btn-desiderata btn-interro">?</span>:&nbsp;Indifférent)</h2>
+                <div style="margin-bottom: 15px;"> 
+                    <label for="upload-desiderata-soir">Importer Désidératats Soir (.csv):</label>
+                    <input type="file" id="upload-desiderata-soir" accept=".csv" style="display: inline-block; margin-left: 10px;">
+                    <button onclick="importerDesideratas('soir')" style="margin-left: 10px; padding: 5px 10px; font-size: 14px;">Charger Fichier Soir</button>
+                </div>
+                <div class="table-container"> <table id="tableau-désidératats-soir"><thead><tr><th>Collab.</th></tr></thead><tbody></tbody></table> </div>
+                <h2>Compétences Soir (Listes)</h2>
+                <div class="table-container"> <table id="tableau-aptitudes-soir"><thead><tr><th>Collab.</th></tr></thead><tbody></tbody></table> </div>
+            </div>
+         </div>
+
+        <div class="section-collapsible" id="section-edt-soir">
+              <h2 class="collapsible-trigger">Emploi du temps généré pour le soir</h2>
+              <div class="contenu-collapsible">
+                   <div id="message-erreur-couverture-soir"></div>
+                   <div class="table-container">
+                       <table id="tableau-emploi-du-temps-soir"><thead><tr></tr></thead><tbody></tbody></table>
+                   </div>
+              </div>
+          </div>
+
+
+        <hr style="border: none; border-top: 3px solid var(--rose-principal); margin: 40px 0;">
+
+        <h2 style="margin-top: 30px;">Plannig Global (Cliquer pour modifier)</h2>
+        <div class="table-container">
+            <table id="tableau-combiné">
+                <thead><tr><th>Collaborateur</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div class="button-group">
+            <button onclick="exporterTableauEnPDF('tableau-combiné', 'Global')" title="Télécharge le planning global Matin/Soir (avec éditions manuelles du soir et D&D)">Exporter Planning Global (PDF)</button>
+            <button onclick="exporterTableauEnPDF('tableau-emploi-du-temps', 'Matin_Detail')" title="Télécharge le planning détaillé Matin (reflète D&D)">Exporter Planning Matin (PDF)</button>
+            <button onclick="exporterTableauEnPDF('tableau-emploi-du-temps-soir', 'Soir_Detail')" title="Télécharge le planning détaillé Soir (reflète éditions et D&D)">Exporter Planning Soir (PDF)</button>
+        </div>
+        <div id="regenerate-container">
+            <button onclick="forcerRegeneration()" title="Relance l'algorithme d'assignation pour le Matin ET le Soir. Écrase le planning sauvegardé pour ce mois.">Regénérer les Plannings</button>
+        </div>
+        <div class="menu-reset-container">
+            <button class="menu-reset-btn" onclick="toggleMenuReset()" title="Options pour effacer les données">Réinitialiser...</button>
+            <div id="menu-reset-content" class="menu-content">
+                <h3 style="color:var(--rose-moyen); margin-top:0; margin-bottom: 8px;">Mois Courant</h3>
+                <button onclick="resetDesiderataMois('désidératats', 'Matin')" title="Efface V/X/? Matin mois courant">Effacer Désidératats Matin (mois)</button>
+                <button onclick="resetDesiderataMois('désidératats-soir', 'Soir')" title="Efface V/X/? Soir mois courant">Effacer Désidératats Soir (mois)</button>
+                <button onclick="effacerEDTSauvegardeMoisCourant(true)" title="Supprime le planning généré sauvegardé pour ce mois">Effacer Planning Sauvegardé (mois)</button>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 10px 0;">
+                <h3 style="color:var(--rose-moyen); margin-bottom: 8px;">Toutes Données</h3>
+                <button onclick="resetCompetencesToutes('Listes', 'Compétences Matin')" title="Décoche toutes compétences Matin">Effacer Compétences Matin (tout)</button>
+                <button onclick="resetCompetencesToutes('Aptitudes-Soir', 'Aptitudes Soir')" title="Décoche toutes aptitudes Soir">Effacer Aptitudes Soir (tout)</button>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 10px 0;">
+                <button onclick="resetComplet()" style="background-color: #ffe0e0; color: #dc3545; border-color: #dc3545;" title="ATTENTION: Efface TOUT ! (Désidératas, Compétences, Plannings Sauvegardés)">Réinitialisation Complète !</button>
+            </div>
+           </div>
+
+    </div> <script>
+        // --- CONSTANTES ---
+        let collaborateurs = ['Benjamin', 'Caroline', 'Nora', 'Radj', 'Baptiste', 'Sevan', 'Miriel', 'Jean-Semy', 'Adam', 'Chloé', 'Thomas', 'Victorine', 'Dimitiri', 'Rémi', 'Elisa', 'Paula', 'Laurine'];
+        const listesMatin = ['m.1', 'm.2', 'm.3', 'm.4', 'm.5', 'm.6', 'm.7'];
+        const aptitudesSoir = ['s.V', 's.B', 's.M', 's.R', 's.J'];
+        const MAX_TRIES_JOUR = 7; // Correction Matin
+        const MAX_TRIES_SOIR_OPTIMIZATION = 300; // Optimisation Soir (augmenté)
+
+        // Variables globales pour stocker les données des plannings générés
+        let globalEmploiDuTempsMatin = {};
+        let globalEmploiDuTempsSoir = {};
+        let globalPreferencesSoir = {}; // Pour l'édition manuelle (validation basique)
+        let anneeActuelle = new Date().getFullYear(); // MODIF: MEMOIRE - Stocker l'année courante
+
+        // --- GESTION COLLABORATEURS & LOCALSTORAGE ---
+        function chargerCollaborateurs() {
+            const sauvegarde = localStorage.getItem('collaborateurs');
+            if (sauvegarde) {
+                try {
+                    const parsed = JSON.parse(sauvegarde);
+                    if (!Array.isArray(parsed) || !parsed.every(item => typeof item === 'string')) {
+                        if (parsed.length > 0 || !Array.isArray(parsed)) {
+                            throw new Error("Invalid data format in localStorage");
+                        }
+                        collaborateurs = [];
+                    } else {
+                        collaborateurs = parsed;
+                    }
+                } catch (e) {
+                    console.error("Erreur chargement/validation collaborateurs:", e);
+                    collaborateurs = ['Benjamin', 'Caroline', 'Nora', 'Radj', 'Baptiste', 'Sevan', 'Miriel', 'Jean-Semy', 'Adam', 'Chloé', 'Thomas', 'Victorine', 'Dimitiri', 'Rémi', 'Elisa', 'Paula', 'Laurine']; // Default on error
+                    localStorage.removeItem('collaborateurs');
+                }
+            } else {
+                 collaborateurs = ['Benjamin', 'Caroline', 'Nora', 'Radj', 'Baptiste', 'Sevan', 'Miriel', 'Jean-Semy', 'Adam', 'Chloé', 'Thomas', 'Victorine', 'Dimitiri', 'Rémi', 'Elisa', 'Paula', 'Laurine'];
+            }
+            mettreAJourSelectSuppression();
+        }
+
+        function sauvegarderCollaborateurs() {
+            localStorage.setItem('collaborateurs', JSON.stringify(collaborateurs));
+        }
+
+        function mettreAJourSelectSuppression() {
+            const select = document.getElementById('select-supprimer');
+            if (!select) return;
+            select.innerHTML = '<option value="">-- Sélectionner --</option>';
+            collaborateurs.forEach(collaborateur => {
+                const option = document.createElement('option');
+                option.value = collaborateur;
+                option.textContent = collaborateur;
+                select.appendChild(option);
+            });
+        }
+        function ajouterCollaborateur() {
+            const input = document.getElementById('nouveau-collaborateur');
+            const nouveauNom = input.value.trim();
+            if (nouveauNom && !collaborateurs.some(c => c.toLowerCase() === nouveauNom.toLowerCase())) {
+                collaborateurs.push(nouveauNom);
+                sauvegarderCollaborateurs();
+                chargerCollaborateurs();
+                rafraichirTousLesTableauxEtEDT(true);
+                input.value = '';
+                alert(`"${nouveauNom}" a été ajouté avec succès ! Il sera inclus lors de la prochaine génération de planning.`);
+                fermerTousMenus();
+            } else if (collaborateurs.some(c => c.toLowerCase() === nouveauNom.toLowerCase())) {
+                alert('Ce collaborateur existe déjà !');
+            } else {
+                alert('Veuillez entrer un nom valide !');
+            }
+        }
+        function supprimerCollaborateur() {
+            const select = document.getElementById('select-supprimer');
+            const collaborateurASupprimer = select.value;
+            if (collaborateurASupprimer) {
+                if (confirm(`ATTENTION !\n\nÊtes-vous sûr de vouloir supprimer "${collaborateurASupprimer}" ?\n\nToutes ses préférences (désidératats Matin & Soir) et ses compétences/aptitudes (Matin & Soir) seront définitivement effacées.\n\nLes plannings sauvegardés contenant ce collaborateur pourraient devenir incohérents. Il est conseillé de regénérer les plannings concernés.`)) {
+                    const index = collaborateurs.findIndex(c => c === collaborateurASupprimer);
+                    if (index !== -1) {
+                        collaborateurs.splice(index, 1);
+                        sauvegarderCollaborateurs();
+                        chargerCollaborateurs();
+                        localStorage.removeItem(`Listes-${collaborateurASupprimer}`);
+                        localStorage.removeItem(`Aptitudes-Soir-${collaborateurASupprimer}`);
+                        for (let m = 0; m < 12; m++) {
+                            supprimerDonneesCollabLocalStorage(`désidératats-${m}`, collaborateurASupprimer);
+                            supprimerDonneesCollabLocalStorage(`désidératats-soir-${m}`, collaborateurASupprimer);
+                            // Supprimer aussi les données EDT sauvegardées pour ce collaborateur pour tous les mois ? Plus complexe.
+                            // Pour l'instant, on supprime juste les préférences. L'EDT devra être regénéré.
+                        }
+                        rafraichirTousLesTableauxEtEDT(true);
+                        select.value = "";
+                        alert(`"${collaborateurASupprimer}" a été supprimé avec succès.`);
+                        fermerTousMenus();
+                    }
+                }
+            } else {
+                alert('Veuillez sélectionner un collaborateur à supprimer.');
+            }
+        }
+
+        function supprimerDonneesCollabLocalStorage(baseKey, collaborateur) {
+            let donnees = JSON.parse(localStorage.getItem(baseKey)) || {};
+            let cleSupprimee = false;
+            Object.keys(donnees).forEach(key => {
+                if (key.startsWith(`${collaborateur}-`)) {
+                    delete donnees[key];
+                    cleSupprimee = true;
+                }
+            });
+            if (cleSupprimee) {
+                if (Object.keys(donnees).length > 0) {
+                    localStorage.setItem(baseKey, JSON.stringify(donnees));
+                } else {
+                    localStorage.removeItem(baseKey);
+                }
+            }
+        }
+
+        // --- GESTION MENUS ---
+        function toggleMenuCollaborateurs() {
+            const menu = document.getElementById('menu-collaborateurs-content');
+            const overlay = document.getElementById('overlay-menus');
+            const estOuvert = menu.classList.contains('show');
+            fermerTousMenus();
+            if (!estOuvert) { menu.classList.add('show'); overlay.classList.add('show'); }
+        }
+        function toggleMenuReset() {
+            const menu = document.getElementById('menu-reset-content');
+            const overlay = document.getElementById('overlay-menus');
+            const estOuvert = menu.classList.contains('show');
+            fermerTousMenus();
+            if (!estOuvert) { menu.classList.add('show'); overlay.classList.add('show'); }
+        }
+        function fermerTousMenus() {
+            document.querySelectorAll('.menu-content.show').forEach(menu => menu.classList.remove('show'));
+            const overlay = document.getElementById('overlay-menus');
+            if(overlay) overlay.classList.remove('show');
+        }
+
+        // --- FONCTION UTILITAIRE COULEUR SELECT ---
+        function mettreAJourCouleurSelect(selectElement) {
+            const valeur = selectElement.value;
+            selectElement.style.fontWeight = (valeur === 'repos' || valeur === 'travailler') ? 'bold' : '';
+            selectElement.style.color = (valeur === 'repos') ? 'var(--rouge-nok)' : (valeur === 'travailler' ? 'var(--vert-ok)' : '#333');
+        }
+
+        // --- NOUVELLE FONCTION GÉNÉRIQUE : METTRE TOUS LES JOURS À UNE VALEUR ---
+        function mettreToutEn(collaborateur, valeurCible, typeTableau, tableId) {
+            const selectMois = document.getElementById('select-mois');
+            const mois = parseInt(selectMois.value);
+            const annee = anneeActuelle;
+            const nombreJours = new Date(annee, mois + 1, 0).getDate();
+            const localStorageKeyPrefix = (typeTableau === 'matin') ? 'désidératats' : 'désidératats-soir';
+            const nomAffichage = (typeTableau === 'matin') ? 'Matin' : 'Soir';
+            const localStorageKey = `${localStorageKeyPrefix}-${mois}`;
+
+            let actionTexte = '';
+            let valeurTexte = '';
+            switch(valeurCible) {
+                case 'travailler': actionTexte = "Voulu (V)"; valeurTexte = 'V'; break;
+                case 'repos': actionTexte = "Repos (X)"; valeurTexte = 'X'; break;
+                case 'indifferent': actionTexte = "Indifférent (?)"; valeurTexte = '?'; break;
+                default: console.error("Valeur cible inconnue:", valeurCible); return;
+            }
+
+            if (confirm(`Voulez-vous vraiment mettre tous les jours en "${actionTexte}" pour ${collaborateur} (${nomAffichage}) pour ce mois ?`)) {
+                let donneesActuelles = JSON.parse(localStorage.getItem(localStorageKey)) || {};
+                for (let i = 1; i <= nombreJours; i++) {
+                    const cleTravail = `${collaborateur}-${i}-travail`;
+                    if (valeurCible === 'indifferent') {
+                        delete donneesActuelles[cleTravail];
+                    } else {
+                        donneesActuelles[cleTravail] = valeurCible;
+                    }
+                }
+                if (Object.keys(donneesActuelles).length > 0) {
+                     localStorage.setItem(localStorageKey, JSON.stringify(donneesActuelles));
+                } else {
+                     localStorage.removeItem(localStorageKey);
+                }
+
+                const tableau = document.getElementById(tableId);
+                if (tableau) {
+                    const tbody = tableau.querySelector('tbody');
+                    const rows = tbody.querySelectorAll('tr');
+                    for (const tr of rows) {
+                        const tdNomCell = tr.querySelector('td:first-child');
+                        // Adjust selector to find the span containing the name, ignoring the button group span
+                        const spanNom = tdNomCell.querySelector('span:not(.button-group-desiderata)');
+                        if (spanNom && spanNom.textContent.trim() === collaborateur) {
+                            const selects = tr.querySelectorAll('select');
+                            selects.forEach(select => {
+                                select.value = valeurCible;
+                                mettreAJourCouleurSelect(select);
+                            });
+                            break;
+                        }
+                    }
+                }
+                effacerEDTSauvegardeMoisCourant(false);
+                cacherMessageInfoChargement();
+            }
+        }
+
+
+        // --- GÉNÉRATION TABLEAUX DÉSIDÉRATATS & COMPÉTENCES ---
+        function genererTableauDesideratats(mois, annee, tableId, localStorageKeyPrefix) {
+            const tableau = document.getElementById(tableId); if (!tableau) return;
+            const thead = tableau.querySelector('thead tr'); const tbody = tableau.querySelector('tbody'); if (!thead || !tbody) return;
+            const nombreJours = new Date(annee, mois + 1, 0).getDate();
+            thead.innerHTML = '<th>Collaborateur</th>';
+            for (let i = 1; i <= nombreJours; i++) {
+                const th = document.createElement('th'); const jourDate = new Date(annee, mois, i); const jourSemaine = ['Di', 'Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa'][jourDate.getDay()];
+                th.innerHTML = `${jourSemaine}<br>${i}`; if (jourDate.getDay() === 0 || jourDate.getDay() === 6) th.classList.add('weekend'); thead.appendChild(th);
+            }
+            tbody.innerHTML = '';
+            const localStorageKey = `${localStorageKeyPrefix}-${mois}`; const donneesSauvegardees = JSON.parse(localStorage.getItem(localStorageKey)) || {};
+            const typeTableauStr = (localStorageKeyPrefix === 'désidératats') ? 'matin' : 'soir';
+
+            collaborateurs.forEach(collaborateur => {
+                const tr = document.createElement('tr');
+                const tdNom = document.createElement('td');
+                const spanNom = document.createElement('span'); spanNom.textContent = collaborateur; tdNom.appendChild(spanNom);
+                const buttonContainer = document.createElement('span'); buttonContainer.classList.add('button-group-desiderata');
+                const btnToutV = document.createElement('button'); btnToutV.textContent = 'V'; btnToutV.classList.add('btn-desiderata', 'btn-v'); btnToutV.title = `Mettre tous les jours en 'Voulu (V)' pour ${collaborateur}`; btnToutV.onclick = function() { mettreToutEn(collaborateur, 'travailler', typeTableauStr, tableId); }; buttonContainer.appendChild(btnToutV);
+                const btnToutInterro = document.createElement('button'); btnToutInterro.textContent = '?'; btnToutInterro.classList.add('btn-desiderata', 'btn-interro'); btnToutInterro.title = `Mettre tous les jours en 'Indifférent (?)' pour ${collaborateur}`; btnToutInterro.onclick = function() { mettreToutEn(collaborateur, 'indifferent', typeTableauStr, tableId); }; buttonContainer.appendChild(btnToutInterro);
+                const btnToutX = document.createElement('button'); btnToutX.textContent = 'X'; btnToutX.classList.add('btn-desiderata', 'btn-x'); btnToutX.title = `Mettre tous les jours en 'Repos (X)' pour ${collaborateur}`; btnToutX.onclick = function() { mettreToutEn(collaborateur, 'repos', typeTableauStr, tableId); }; buttonContainer.appendChild(btnToutX);
+                tdNom.appendChild(buttonContainer); tr.appendChild(tdNom);
+
+                for (let i = 1; i <= nombreJours; i++) {
+                    const tdCase = document.createElement('td'); const selectTravail = document.createElement('select'); selectTravail.innerHTML = `<option value="indifferent">?</option><option value="repos">X</option><option value="travailler">V</option>`;
+                    const cleTravail = `${collaborateur}-${i}-travail`; selectTravail.value = donneesSauvegardees[cleTravail] || 'indifferent'; const jourDate = new Date(annee, mois, i);
+                    if (jourDate.getDay() === 0 || jourDate.getDay() === 6) tdCase.classList.add('weekend');
+                    selectTravail.addEventListener('change', (event) => {
+                        const selectModifie = event.target; const nouvelleValeur = selectModifie.value; mettreAJourCouleurSelect(selectModifie); const donneesActuelles = JSON.parse(localStorage.getItem(localStorageKey)) || {};
+                        if (nouvelleValeur === 'indifferent') delete donneesActuelles[cleTravail]; else donneesActuelles[cleTravail] = nouvelleValeur;
+                        if (Object.keys(donneesActuelles).length > 0) localStorage.setItem(localStorageKey, JSON.stringify(donneesActuelles)); else localStorage.removeItem(localStorageKey);
+                        effacerEDTSauvegardeMoisCourant(false);
+                        cacherMessageInfoChargement();
+                    });
+                    tdCase.appendChild(selectTravail); tr.appendChild(tdCase); mettreAJourCouleurSelect(selectTravail);
+                }
+                tbody.appendChild(tr);
+            });
+        }
+        function genererTableauDesideratatsMatin(mois, annee) { genererTableauDesideratats(mois, annee, 'tableau-désidératats', 'désidératats'); }
+        function genererTableauDesideratatsSoir(mois, annee) { genererTableauDesideratats(mois, annee, 'tableau-désidératats-soir', 'désidératats-soir'); }
+
+        function genererTableauCompetences(tableId, listeDesPostes, localStorageKeyPrefix) {
+            const tableauCompetences = document.getElementById(tableId); if (!tableauCompetences) return;
+            const thead = tableauCompetences.querySelector('thead tr'); const tbody = tableauCompetences.querySelector('tbody'); if (!tbody || !thead) return;
+            thead.innerHTML = '<th>Collaborateur</th>'; listeDesPostes.forEach(poste => { const th = document.createElement('th'); th.textContent = poste; thead.appendChild(th); }); tbody.innerHTML = '';
+            collaborateurs.forEach(collaborateur => {
+                const tr = document.createElement('tr'); const tdCollaborateur = document.createElement('td'); tdCollaborateur.textContent = collaborateur; tr.appendChild(tdCollaborateur);
+                listeDesPostes.forEach(poste => {
+                    const td = document.createElement('td'); const label = document.createElement('label'); const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.value = poste; checkbox.dataset.collaborateur = collaborateur;
+                    const localStorageKey = `${localStorageKeyPrefix}-${collaborateur}`; const postesSelectionnes = JSON.parse(localStorage.getItem(localStorageKey)) || []; checkbox.checked = postesSelectionnes.includes(poste);
+                    checkbox.addEventListener('change', (event) => {
+                        const cb = event.target; const collab = cb.dataset.collaborateur; const pst = cb.value; let currentPostes = JSON.parse(localStorage.getItem(localStorageKey)) || [];
+                        if (cb.checked) { if (!currentPostes.includes(pst)) currentPostes.push(pst); } else { currentPostes = currentPostes.filter(item => item !== pst); }
+                        if (currentPostes.length > 0) localStorage.setItem(localStorageKey, JSON.stringify(currentPostes)); else localStorage.removeItem(localStorageKey);
+                         effacerEDTSauvegardeMoisCourant(false);
+                         cacherMessageInfoChargement();
+                    });
+                    label.appendChild(checkbox); td.appendChild(label); tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+        }
+        function genererTableauListesMatin() { genererTableauCompetences('tableau-Listes', listesMatin, 'Listes'); }
+        function genererTableauAptitudesSoir() { genererTableauCompetences('tableau-aptitudes-soir', aptitudesSoir, 'Aptitudes-Soir'); }
+
+        // --- FONCTIONS UTILITAIRES EDT ---
+        function shuffleArray(array) { for (let i = array.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [array[i], array[j]] = [array[j], array[i]]; } return array; }
+        function choisirMoinsOccupe(candidats, emploiDuTempsConcerne) { if (!candidats || candidats.length === 0) return null; if (candidats.length === 1) return candidats[0]; return candidats.reduce((moinsOccupe, candidat) => { const joursTravailMoinsOccupe = Object.values(emploiDuTempsConcerne[moinsOccupe] || {}).filter(j => j !== null && j !== 'REPOS').length; const joursTravailCandidat = Object.values(emploiDuTempsConcerne[candidat] || {}).filter(j => j !== null && j !== 'REPOS').length; return joursTravailCandidat < joursTravailMoinsOccupe ? candidat : moinsOccupe; }, candidats[0]); }
+        function estPosteCouvert(poste, jour, emploiDuTempsConcerne) { if (!emploiDuTempsConcerne) return false; return collaborateurs.some(collaborateur => emploiDuTempsConcerne[collaborateur]?.[jour - 1] === poste); }
+
+        // --- Fonctions spécifiques Matin ---
+        function assignerJourMatin(jour, preferences, competences, emploiDuTempsGlobal, tempEmploiJour, listeDesPostes) { const postesJourMelanges = shuffleArray([...listeDesPostes]); for (const poste of postesJourMelanges) { let estDejaAssigne = false; for (const assignation of tempEmploiJour.values()) { if (assignation === poste) { estDejaAssigne = true; break; } } if (estDejaAssigne) continue; const candidats = collaborateurs.filter(c => competences[c]?.includes(poste) && tempEmploiJour.get(c) === null); if (candidats.length > 0) { const candidatsTries = [...candidats].sort((a, b) => { const prefA = preferences[a]?.[jour] || 'indifferent'; const prefB = preferences[b]?.[jour] || 'indifferent'; if (prefA === 'indifferent' && prefB !== 'indifferent') return -1; if (prefB === 'indifferent' && prefA !== 'indifferent') return 1; if (prefA === 'travailler' && prefB !== 'travailler') return -1; if (prefB === 'travailler' && prefA !== 'travailler') return 1; const joursA = Object.values(emploiDuTempsGlobal[a] || {}).filter(p => p !== null && p !== 'REPOS').length; const joursB = Object.values(emploiDuTempsGlobal[b] || {}).filter(p => p !== null && p !== 'REPOS').length; return joursA - joursB; }); const elu = candidatsTries[0]; tempEmploiJour.set(elu, poste); } } }
+        function verifierCouvertureJourMatin(tempEmploiJour, listeDesPostes) { const postesCouverts = new Set(); if (!(tempEmploiJour instanceof Map)) return false; for (const assignation of tempEmploiJour.values()) { if (assignation && assignation !== 'REPOS') { postesCouverts.add(assignation); } } return postesCouverts.size === listeDesPostes.length; }
+
+        // --- Fonction Helper pour l'Optimisation Soir ---
+        function tenterAssignationSoirOptimisation(jour, preferences, competences, emploiDuTempsMatin, listeDesPostes) { const tempEmploiJour = new Map(); const collaborateursUtilises = new Set(); const postesAssignes = new Set(); collaborateurs.forEach(c => { if (preferences[c]?.[jour] === 'repos') { tempEmploiJour.set(c, 'REPOS'); collaborateursUtilises.add(c); } else { tempEmploiJour.set(c, null); } }); const preferredCandidatesPool = collaborateurs.filter(c => !collaborateursUtilises.has(c) && (preferences[c]?.[jour] === 'travailler' || (emploiDuTempsMatin[c]?.[jour - 1] !== null && emploiDuTempsMatin[c]?.[jour - 1] !== 'REPOS')) && (competences[c] && competences[c].length > 0) ); if (preferredCandidatesPool.length < listeDesPostes.length) return null; const shuffledPostes = shuffleArray([...listeDesPostes]); const shuffledCandidats = shuffleArray([...preferredCandidatesPool]); for (const poste of shuffledPostes) { let posteAssigneCettePasse = false; for (const candidat of shuffledCandidats) { if (!collaborateursUtilises.has(candidat) && competences[candidat]?.includes(poste)) { tempEmploiJour.set(candidat, poste); collaborateursUtilises.add(candidat); postesAssignes.add(poste); posteAssigneCettePasse = true; break; } } if (!posteAssigneCettePasse) return null; } if (postesAssignes.size === listeDesPostes.length) return tempEmploiJour; else return null; }
+
+        // --- GÉNÉRATION EMPLOI DU TEMPS MATIN ---
+        function genererEmploiDuTempsMatin() {
+            console.time("Génération EDT Matin");
+            const selectMois = document.getElementById('select-mois'); const mois = parseInt(selectMois.value); const annee = anneeActuelle; const nombreJours = new Date(annee, mois + 1, 0).getDate();
+            const listeDesPostes = listesMatin; const localStorageKeyDesideratats = 'désidératats'; const localStorageKeyCompetencesPrefix = 'Listes'; const tableId = 'tableau-emploi-du-temps'; const messageId = 'message-erreur-couverture';
+            let emploiDuTemps = {}; const preferences = {}; const competences = {};
+            const desideratatsKey = `${localStorageKeyDesideratats}-${mois}`; const donneesDesideratats = JSON.parse(localStorage.getItem(desideratatsKey)) || {};
+            collaborateurs.forEach(c => { preferences[c] = {}; competences[c] = JSON.parse(localStorage.getItem(`${localStorageKeyCompetencesPrefix}-${c}`)) || []; emploiDuTemps[c] = Array(nombreJours).fill(null); for (let j = 1; j <= nombreJours; j++) { const cle = `${c}-${j}-travail`; preferences[c][j] = donneesDesideratats[cle] || 'indifferent'; if (preferences[c][j] === 'repos') emploiDuTemps[c][j - 1] = 'REPOS'; } });
+            const weekends = []; for (let jour = 1; jour <= nombreJours; jour++) { const date = new Date(annee, mois, jour); if (date.getDay() === 0) { const samedi = jour - 1; if (samedi >= 1 && new Date(annee, mois, samedi).getDay() === 6) weekends.push({ samedi: samedi, dimanche: jour }); } }
+            /* Passe 1: Priorité 'V' */
+            for (let jour = 1; jour <= nombreJours; jour++) { const postesMelangesJour = shuffleArray([...listeDesPostes]); for (const poste of postesMelangesJour) { if (!estPosteCouvert(poste, jour, emploiDuTemps)) { const candidatsV = collaborateurs.filter(c => preferences[c]?.[jour] === 'travailler' && competences[c]?.includes(poste) && emploiDuTemps[c]?.[jour - 1] === null ); if (candidatsV.length > 0) { const choisi = choisirMoinsOccupe(candidatsV, emploiDuTemps); if (choisi && emploiDuTemps[choisi]) emploiDuTemps[choisi][jour - 1] = poste; } } } }
+            /* Passe 2: Weekends */
+            const weekendsMelanges = shuffleArray([...weekends]); weekendsMelanges.forEach(we => { const { samedi, dimanche } = we; const postesMelangesWE = shuffleArray([...listeDesPostes]); for (const poste of postesMelangesWE) { const samediCouvert = estPosteCouvert(poste, samedi, emploiDuTemps); const dimancheCouvert = estPosteCouvert(poste, dimanche, emploiDuTemps); if (samediCouvert && dimancheCouvert) continue; let candidats2J = collaborateurs.filter(c => competences[c]?.includes(poste) && emploiDuTemps[c]?.[samedi - 1] === null && emploiDuTemps[c]?.[dimanche - 1] === null && preferences[c]?.[samedi] !== 'repos' && preferences[c]?.[dimanche] !== 'repos'); if (candidats2J.length > 0) { const choisi = choisirMoinsOccupe(candidats2J, emploiDuTemps); if (choisi && emploiDuTemps[choisi]) { if (!samediCouvert) emploiDuTemps[choisi][samedi - 1] = poste; if (!dimancheCouvert) emploiDuTemps[choisi][dimanche - 1] = poste; } continue; } if (!samediCouvert) { let candidatsS = collaborateurs.filter(c => competences[c]?.includes(poste) && emploiDuTemps[c]?.[samedi - 1] === null && preferences[c]?.[samedi] !== 'repos'); if (candidatsS.length > 0) { const eluS = choisirMoinsOccupe(candidatsS, emploiDuTemps); if (eluS && emploiDuTemps[eluS]) emploiDuTemps[eluS][samedi - 1] = poste; } } if (!estPosteCouvert(poste, dimanche, emploiDuTemps)) { let candidatsD = collaborateurs.filter(c => competences[c]?.includes(poste) && emploiDuTemps[c]?.[dimanche - 1] === null && preferences[c]?.[dimanche] !== 'repos'); if (candidatsD.length > 0) { const eluD = choisirMoinsOccupe(candidatsD, emploiDuTemps); if (eluD && emploiDuTemps[eluD]) emploiDuTemps[eluD][dimanche - 1] = poste; } } } });
+            /* Passe 3: Semaine Remplissage */
+            for (let jour = 1; jour <= nombreJours; jour++) { const date = new Date(annee, mois, jour); if (date.getDay() === 0 || date.getDay() === 6) continue; const postesMelangesSemaine = shuffleArray([...listeDesPostes]); for (const poste of postesMelangesSemaine) { if (!estPosteCouvert(poste, jour, emploiDuTemps)) { let dispo = collaborateurs.filter(c => competences[c]?.includes(poste) && emploiDuTemps[c]?.[jour - 1] === null ); if (dispo.length > 0) { if (dispo.length > 1) { dispo.sort((a, b) => { const prefA = preferences[a]?.[jour]||'i'; const prefB = preferences[b]?.[jour]||'i'; if (prefA === 'i' && prefB !== 'i') return -1; if (prefB === 'i' && prefA !== 'i') return 1; if (prefA === 't' && prefB !== 't') return -1; if (prefB === 't' && prefA !== 't') return 1; const jA = emploiDuTemps[a]?.filter(p=>p&&p!='REPOS').length||0; const jB = emploiDuTemps[b]?.filter(p=>p&&p!='REPOS').length||0; return jA - jB; }); } const elu = dispo[0]; if (elu && emploiDuTemps[elu]) emploiDuTemps[elu][jour - 1] = poste; } } } }
+             /* Passe 4: Correction */
+             const joursProblemes = []; for (let j=1; j<=nombreJours; j++){let ok=true; for(const p of listeDesPostes){if(!estPosteCouvert(p,j,emploiDuTemps)){ok=false; break;}} if(!ok)joursProblemes.push(j);}
+             if(joursProblemes.length > 0){ console.log(`Tentative correction Matin - Jours: ${joursProblemes.join(', ')}`); for(const j of joursProblemes){ let succes = false; for(let t=0; t<MAX_TRIES_JOUR; t++){ const tempJ = new Map(); collaborateurs.forEach(c => { tempJ.set(c, emploiDuTemps[c]?.[j-1]==='REPOS'?'REPOS':null); }); assignerJourMatin(j, preferences, competences, emploiDuTemps, tempJ, listeDesPostes); if(verifierCouvertureJourMatin(tempJ, listeDesPostes)){ console.log(`Correction Matin Jour ${j} OK (${t+1})`); for(const [collab, assign] of tempJ.entries()){if(emploiDuTemps[collab])emploiDuTemps[collab][j-1]=assign;} succes = true; break; } } if(!succes)console.log(`Echec correction Matin Jour ${j}`); } } else {console.log("Aucun jour Matin incomplet.");}
+
+            globalEmploiDuTempsMatin = emploiDuTemps;
+            afficherUnEmploiDuTemps(emploiDuTemps, mois, annee, nombreJours, preferences, tableId, messageId, listeDesPostes);
+            console.timeEnd("Génération EDT Matin");
+            return emploiDuTemps;
+        }
+
+        // --- GÉNÉRATION EMPLOI DU TEMPS SOIR ---
+        function genererEmploiDuTempsSoir() {
+            console.time("Génération EDT Soir");
+            const selectMois = document.getElementById('select-mois'); const mois = parseInt(selectMois.value); const annee = anneeActuelle; const nombreJours = new Date(annee, mois + 1, 0).getDate();
+            const listeDesPostes = aptitudesSoir; const localStorageKeyDesideratats = 'désidératats-soir'; const localStorageKeyCompetencesPrefix = 'Aptitudes-Soir'; const tableId = 'tableau-emploi-du-temps-soir'; const messageId = 'message-erreur-couverture-soir';
+            const emploiDuTempsMatin = globalEmploiDuTempsMatin; let emploiDuTemps = {}; const preferences = {}; const competences = {};
+            const desideratatsKey = `${localStorageKeyDesideratats}-${mois}`; const donneesDesideratats = JSON.parse(localStorage.getItem(desideratatsKey)) || {};
+            collaborateurs.forEach(c => { preferences[c] = {}; const competenceKey = `${localStorageKeyCompetencesPrefix}-${c}`; competences[c] = JSON.parse(localStorage.getItem(competenceKey)) || []; emploiDuTemps[c] = Array(nombreJours).fill(null); for (let jour = 1; jour <= nombreJours; jour++) { const clePref = `${c}-${jour}-travail`; preferences[c][jour] = donneesDesideratats[clePref] || 'indifferent'; if (preferences[c][jour] === 'repos') emploiDuTemps[c][jour - 1] = 'REPOS'; } });
+            globalPreferencesSoir = preferences; // Store for potential later use (e.g., styling, validation)
+
+            for (let jour = 1; jour <= nombreJours; jour++) {
+                const postesPourPasses12 = shuffleArray([...listeDesPostes]);
+                for (const poste of postesPourPasses12) {
+                    if (estPosteCouvert(poste, jour, emploiDuTemps)) continue;
+                    /* Passe 1: 'V' Soir */
+                    let candidatsV = collaborateurs.filter(c => competences[c]?.includes(poste) && preferences[c]?.[jour] === 'travailler' && emploiDuTemps[c]?.[jour - 1] === null);
+                    if (candidatsV.length > 0) { const choisiV = choisirMoinsOccupe(candidatsV, emploiDuTemps); if (choisiV && emploiDuTemps[choisiV]) { emploiDuTemps[choisiV][jour - 1] = poste; continue; } }
+                    /* Passe 2: Travail Matin */
+                    if (estPosteCouvert(poste, jour, emploiDuTemps)) continue;
+                    let candidatsMatin = collaborateurs.filter(c => (emploiDuTempsMatin[c]?.[jour - 1] !== null && emploiDuTempsMatin[c]?.[jour - 1] !== 'REPOS') && competences[c]?.includes(poste) && (preferences[c]?.[jour] === 'travailler' || preferences[c]?.[jour] === 'indifferent' || !preferences[c]?.[jour]) && emploiDuTemps[c]?.[jour - 1] === null);
+                    if (candidatsMatin.length > 0) { const choisiMatin = choisirMoinsOccupe(candidatsMatin, emploiDuTemps); if (choisiMatin && emploiDuTemps[choisiMatin]) emploiDuTemps[choisiMatin][jour - 1] = poste; }
+                }
+                /* Optimisation si incomplet */
+                let jourCompletApresP1P2 = listeDesPostes.every(p => estPosteCouvert(p, jour, emploiDuTemps)); let optimisationReussie = false;
+                if (!jourCompletApresP1P2) {
+                    console.log(`Soir - Jour ${jour}: Incomplet après P1/P2. Tentative d'optimisation (${MAX_TRIES_SOIR_OPTIMIZATION} essais)...`);
+                    for (let attempt = 0; attempt < MAX_TRIES_SOIR_OPTIMIZATION; attempt++) {
+                        const resultatOptimisation = tenterAssignationSoirOptimisation(jour, preferences, competences, emploiDuTempsMatin, listeDesPostes);
+                        if (resultatOptimisation) {
+                            for(const [collab, assign] of resultatOptimisation.entries()){ if(emploiDuTemps[collab]) emploiDuTemps[collab][jour-1] = assign; }
+                            optimisationReussie = true; console.log(`Soir Opt - Jour ${jour}: Correction réussie (essai ${attempt + 1}).`); break;
+                        }
+                    }
+                    if (!optimisationReussie) console.log(`Soir Opt - Jour ${jour}: Echec correction après ${MAX_TRIES_SOIR_OPTIMIZATION} essais.`);
+                }
+            }
+            globalEmploiDuTempsSoir = emploiDuTemps;
+            // Pass the correct preferences (globalPreferencesSoir) for styling the evening table
+            afficherUnEmploiDuTemps(emploiDuTemps, mois, annee, nombreJours, globalPreferencesSoir, tableId, messageId, listeDesPostes);
+            console.timeEnd("Génération EDT Soir");
+            return emploiDuTemps;
+        }
+
+
+        // --- AFFICHAGE EMPLOI DU TEMPS ---
+        // Preferences argument is mainly for styling based on desiderata (relevant for Soir table styling)
+        function afficherUnEmploiDuTemps(emploiDuTemps, mois, annee, nombreJours, preferences, tableId, messageId, listeDesPostes) {
+            const tableauEmploiDuTemps = document.getElementById(tableId); if (!tableauEmploiDuTemps) return;
+            const thead = tableauEmploiDuTemps.querySelector('thead tr'); const tbody = tableauEmploiDuTemps.querySelector('tbody'); if (!thead || !tbody) return;
+            thead.innerHTML = '<th>Collaborateur</th><th>Jrs</th>';
+            for (let i = 1; i <= nombreJours; i++) {
+                const th = document.createElement('th'); const jourDate = new Date(annee, mois, i); const jourSemaine = ['Di', 'Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa'][jourDate.getDay()]; th.innerHTML = `${jourSemaine}<br>${i}`;
+                if (jourDate.getDay() === 0 || jourDate.getDay() === 6) th.classList.add('weekend'); thead.appendChild(th);
+            }
+            tbody.innerHTML = '';
+
+            const trVerification = document.createElement('tr'); trVerification.classList.add("verification-row"); trVerification.setAttribute('id', `verif-${tableId}`);
+            const tdLabelVerif = document.createElement('td'); tdLabelVerif.colSpan = 2; tdLabelVerif.textContent = "Couv."; trVerification.appendChild(tdLabelVerif);
+            for (let jour = 1; jour <= nombreJours; jour++) {
+                const tdVerif = document.createElement('td'); const jourDate = new Date(annee, mois, jour);
+                if (jourDate.getDay() === 0 || jourDate.getDay() === 6) tdVerif.classList.add('weekend');
+                 trVerification.appendChild(tdVerif);
+            }
+            tbody.appendChild(trVerification);
+
+            function updateVerificationRow() {
+                let joursNonCouverts = 0;
+                const row = document.getElementById(`verif-${tableId}`); if (!row) return;
+                // Access the correct data source based on tableId
+                const edtSource = (tableId === 'tableau-emploi-du-temps') ? globalEmploiDuTempsMatin : globalEmploiDuTempsSoir;
+
+                for (let jour = 1; jour <= nombreJours; jour++) {
+                    const tdVerif = row.cells[jour]; // Index starts from 1 because first cell is colspan=2
+                    if (!tdVerif) continue;
+                    const postesCouvertsCeJour = new Set();
+
+                    // Iterate through collaborators to check coverage for this day
+                    collaborateurs.forEach(c => {
+                        // Ensure collaborator exists in edtSource before accessing
+                        if (edtSource && edtSource[c]) {
+                            const poste = edtSource[c]?.[jour - 1];
+                            if (poste && poste !== 'REPOS') {
+                                postesCouvertsCeJour.add(poste);
+                            }
+                        } else {
+                            // console.warn(`Collaborateur ${c} non trouvé dans ${tableId === 'tableau-emploi-du-temps' ? 'globalEmploiDuTempsMatin' : 'globalEmploiDuTempsSoir'} lors de la vérification.`);
+                        }
+                    });
+                    const tousCouverts = postesCouvertsCeJour.size === listeDesPostes.length;
+
+                    if (!tousCouverts) joursNonCouverts++;
+                    tdVerif.textContent = tousCouverts ? "✔" : "✘";
+                    tdVerif.classList.remove("ok", "nok");
+                    tdVerif.classList.add(tousCouverts ? "ok" : "nok");
+                    tdVerif.title = tousCouverts ? "Tous couverts" : `Manquant: ${listeDesPostes.filter(l => !postesCouvertsCeJour.has(l)).join(', ') || 'Aucun!'} (${postesCouvertsCeJour.size}/${listeDesPostes.length})`;
+
+                    const jourDate = new Date(annee, mois, jour);
+                    if (jourDate.getDay() === 0 || jourDate.getDay() === 6) {
+                        tdVerif.classList.add('weekend');
+                    } else {
+                        tdVerif.classList.remove('weekend');
+                    }
+                }
+                const messageErreurDiv = document.getElementById(messageId);
+                if(messageErreurDiv){
+                    if(joursNonCouverts > 0) {
+                        const messageBase = `Attention: ${joursNonCouverts} jour(s) ont des postes non couverts (marqués en ✘).`;
+                        messageErreurDiv.textContent = (tableId === 'tableau-emploi-du-temps')
+                            ? messageBase + ` L'algorithme a tenté ${MAX_TRIES_JOUR} corrections sans succès garanti.`
+                            : messageBase + ` L'assignation auto est terminée. ${tableId === 'tableau-emploi-du-temps-soir' ? 'Vérifiez les données ou éditez dans le tableau global.' : 'Vérifiez les données.'}`;
+                        messageErreurDiv.style.display = 'block';
+                    } else {
+                        messageErreurDiv.style.display = 'none';
+                    }
+                }
+            }
+            updateVerificationRow(); // Initial call
+
+            collaborateurs.forEach(collaborateur => {
+                const tr = document.createElement('tr');
+                const tdNom = document.createElement('td'); tdNom.textContent = collaborateur; tr.appendChild(tdNom);
+                // Access the correct data source based on tableId
+                const edtSource = (tableId === 'tableau-emploi-du-temps') ? globalEmploiDuTempsMatin : globalEmploiDuTempsSoir;
+                const tdJours = document.createElement('td');
+                // Ensure collaborator exists in edtSource before calculating days worked
+                const joursTravailles = (edtSource && edtSource[collaborateur]) ? edtSource[collaborateur].filter(j => j !== null && j !== 'REPOS').length : 0;
+                tdJours.textContent = joursTravailles; tr.appendChild(tdJours);
+                for (let jour = 1; jour <= nombreJours; jour++) {
+                    const td = document.createElement('td');
+                    // Ensure collaborator exists in edtSource before accessing assignment
+                     const assignation = (edtSource && edtSource[collaborateur]) ? edtSource[collaborateur]?.[jour - 1] : null;
+                    td.dataset.collaborateur = collaborateur; td.dataset.jour = jour.toString(); // Use string for dataset consistency
+                    td.setAttribute('id', `cell-${tableId}-${collaborateur}-${jour}`);
+
+                    // Pass the correct preferences object for styling
+                    // For Matin table, preferences aren't used for styling, pass empty or null
+                    // For Soir table, pass the relevant preferences object (likely globalPreferencesSoir)
+                    const prefsCollabJour = (preferences && preferences[collaborateur]) ? preferences[collaborateur][jour] : 'indifferent';
+                    styleCell(td, assignation, prefsCollabJour);
+
+
+                     const jourDate = new Date(annee, mois, jour);
+                      if (jourDate.getDay() === 0 || jourDate.getDay() === 6) {
+                           td.classList.add('weekend');
+                      }
+                    tr.appendChild(td);
+                }
+                tbody.appendChild(tr);
+            });
+            // Attach the update function to the table element for later calls
+            tableauEmploiDuTemps.updateVerification = updateVerificationRow;
+        }
+
+
+        // --- Helper pour styler une cellule ---
+        // preferenceJour is mainly used for title attribute now
+        function styleCell(tdElement, assignation, preferenceJour) {
+             const isWeekend = tdElement.classList.contains('weekend');
+             // Preserve data attributes and weekend class, remove others
+             const dataset = { ...tdElement.dataset }; // Shallow copy
+             tdElement.className = ''; // Reset classes
+             if (isWeekend) tdElement.classList.add('weekend');
+             Object.assign(tdElement.dataset, dataset); // Restore dataset
+
+             tdElement.innerHTML = ''; // Clear content
+
+             const collab = tdElement.dataset.collaborateur;
+             // const jour = tdElement.dataset.jour; // Jour already in dataset
+
+             if (assignation && assignation !== 'REPOS') {
+                  tdElement.textContent = assignation;
+                  tdElement.classList.add("Liste-assigne"); // Apply styling via CSS based on parent table ID and this class
+                  tdElement.title = `${collab} - ${assignation}`;
+             } else if (assignation === 'REPOS') {
+                  tdElement.textContent = 'X';
+                  tdElement.classList.add('repos');
+                  tdElement.title = `${collab} - Repos demandé`;
+             } else {
+                  tdElement.innerHTML = '&nbsp;'; // Non-breaking space for empty cells
+                  tdElement.title = `${collab} - Libre`;
+                  if(preferenceJour === 'travailler') { tdElement.title += ` (Demandait V)`;}
+                  else if(preferenceJour === 'repos') {tdElement.title += ` (Demandait X)`;} // Add title if repo was requested but not granted
+             }
+        }
+
+
+        // --- MAJ Vérification Soir ---
+        function mettreAJourVerificationSoir() {
+            const tableauSoir = document.getElementById('tableau-emploi-du-temps-soir');
+            if (tableauSoir && typeof tableauSoir.updateVerification === 'function') {
+                tableauSoir.updateVerification();
+            }
+            const tableauCombine = document.getElementById('tableau-combiné');
+            if (tableauCombine && typeof tableauCombine.updateVerificationSoir === 'function') {
+                tableauCombine.updateVerificationSoir();
+            }
+        }
+        // --- *** D&D: Fonction pour mettre à jour la vérification Matin (séparée pour D&D) *** ---
+        function mettreAJourVerificationMatin() {
+            const tableauMatin = document.getElementById('tableau-emploi-du-temps');
+            if (tableauMatin && typeof tableauMatin.updateVerification === 'function') {
+                tableauMatin.updateVerification();
+            }
+             const tableauCombine = document.getElementById('tableau-combiné');
+            if (tableauCombine && typeof tableauCombine.updateVerificationMatin === 'function') {
+                tableauCombine.updateVerificationMatin();
+            }
+        }
+
+
+        // --- Gestion Clic Cellule (pour affectation SOIR via prompt) ---
+        function handleSoirCellClick(event) {
+            // *** D&D: Empêcher le clic si on est en train de glisser (évite le prompt pendant D&D) ***
+            if (draggedElement) { // Si un élément est activement glissé
+                return;
+            }
+            // *** D&D: Si le clic vient d'une div draggable, on ne veut pas éditer non plus ***
+             if (event.target.closest('.assign-matin, .assign-soir')) {
+                 return;
+             }
+
+            const td = event.currentTarget;
+            const collaborateur = td.dataset.collaborateur;
+            const jour = parseInt(td.dataset.jour, 10);
+            const valeurActuelleSoir = globalEmploiDuTempsSoir[collaborateur]?.[jour - 1] || '';
+            const aidePostes = aptitudesSoir.join(', ');
+            const promptText = `Modifier affectation SOIR pour ${collaborateur} le Jour ${jour}:\nEntrez un poste (${aidePostes}), 'X' pour Repos, ou vide pour effacer.`;
+            const nouvelleValeurRaw = prompt(promptText, valeurActuelleSoir === 'REPOS' ? 'X' : valeurActuelleSoir);
+
+            if (nouvelleValeurRaw === null) return; // User cancelled
+
+            const nouvelleValeurNettoyee = nouvelleValeurRaw.trim();
+            let nouvelleAffectationSoir = null;
+
+            if (nouvelleValeurNettoyee.toUpperCase() === 'X') {
+                nouvelleAffectationSoir = 'REPOS';
+            } else if (nouvelleValeurNettoyee === '') {
+                nouvelleAffectationSoir = null;
+            } else {
+                const posteValide = aptitudesSoir.find(p => p.toLowerCase() === nouvelleValeurNettoyee.toLowerCase());
+                if (posteValide) {
+                    nouvelleAffectationSoir = posteValide;
+                } else {
+                    alert(`Affectation invalide : "${nouvelleValeurRaw}".\nPostes valides : ${aidePostes}, X, ou vide.`);
+                    return;
+                }
+            }
+
+            // Update global data only if collaborator exists
+             if (globalEmploiDuTempsSoir && globalEmploiDuTempsSoir[collaborateur]) {
+                 globalEmploiDuTempsSoir[collaborateur][jour - 1] = nouvelleAffectationSoir;
+             } else {
+                  console.warn(`Collaborateur ${collaborateur} non trouvé dans globalEmploiDuTempsSoir lors du clic.`);
+                 // Optionally initialize the array if it makes sense in your logic
+                 // globalEmploiDuTempsSoir[collaborateur] = Array(new Date(anneeActuelle, parseInt(document.getElementById('select-mois').value) + 1, 0).getDate()).fill(null);
+                 // globalEmploiDuTempsSoir[collaborateur][jour - 1] = nouvelleAffectationSoir;
+             }
+
+
+            // Update UI: Combined cell
+            const assignMatin = globalEmploiDuTempsMatin[collaborateur]?.[jour - 1];
+            updateCombinedCell(td, assignMatin, nouvelleAffectationSoir);
+
+            // Update UI: Verification rows and Detail Soir table cell
+            mettreAJourVerificationSoir();
+            updateDetailCellSoir(collaborateur, jour.toString(), nouvelleAffectationSoir); // Pass jour as string
+
+            // Persist changes
+            sauvegarderEDTActuel();
+            cacherMessageInfoChargement();
+        }
+
+        // --- Tableau Combiné ---
+        function genererTableauCombine(edtMatin, edtSoir, mois, annee) {
+            const tableId = 'tableau-combiné';
+            const tableauCombine = document.getElementById(tableId); if (!tableauCombine) return;
+            const thead = tableauCombine.querySelector('thead tr'); const tbody = tableauCombine.querySelector('tbody'); if (!thead || !tbody) return;
+            const nombreJours = new Date(annee, mois + 1, 0).getDate();
+
+            thead.innerHTML = '<th>Collaborateur</th>';
+            for (let i = 1; i <= nombreJours; i++) {
+                const th = document.createElement('th'); const jourDate = new Date(annee, mois, i); const jourSemaine = ['Di', 'Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa'][jourDate.getDay()];
+                th.innerHTML = `${jourSemaine}<br>${i}`; if (jourDate.getDay() === 0 || jourDate.getDay() === 6) th.classList.add('weekend'); thead.appendChild(th);
+            }
+            tbody.innerHTML = ''; // Clear previous content
+
+            // Attach update functions to the table element
+            tableauCombine.updateVerificationMatin = updateVerifCombineMatin;
+            tableauCombine.updateVerificationSoir = updateVerifCombineSoir;
+
+            // Verification Row Matin
+            const trVerifMatin = document.createElement('tr'); trVerifMatin.classList.add("verification-row", "verif-matin"); trVerifMatin.setAttribute('id', 'verif-comb-matin');
+            const tdLabelVerifMatin = document.createElement('td'); tdLabelVerifMatin.textContent = "Couv. Matin"; trVerifMatin.appendChild(tdLabelVerifMatin);
+            for (let jour = 1; jour <= nombreJours; jour++) { const tdVerif = document.createElement('td'); if (new Date(annee, mois, jour).getDay() % 6 === 0) tdVerif.classList.add('weekend'); trVerifMatin.appendChild(tdVerif); }
+            tbody.appendChild(trVerifMatin);
+
+            function updateVerifCombineMatin() {
+                 let joursNonCouverts = 0; const row = document.getElementById('verif-comb-matin'); if (!row) return;
+                 for (let jour = 1; jour <= nombreJours; jour++) {
+                     const tdVerif = row.cells[jour]; if (!tdVerif) continue; // Index 1 is the first day cell
+                     const postesCouvertsCeJour = new Set();
+                     collaborateurs.forEach(c => {
+                         // Ensure global data exists before accessing
+                         if (globalEmploiDuTempsMatin && globalEmploiDuTempsMatin[c]) {
+                              const poste = globalEmploiDuTempsMatin[c]?.[jour - 1];
+                              if (poste && poste !== 'REPOS') postesCouvertsCeJour.add(poste);
+                         }
+                     });
+                     const tousCouverts = postesCouvertsCeJour.size === listesMatin.length; if (!tousCouverts) joursNonCouverts++;
+                     tdVerif.textContent = tousCouverts ? "✔" : "✘";
+                     tdVerif.classList.remove("ok", "nok");
+                     tdVerif.classList.add(tousCouverts ? "ok" : "nok");
+                     tdVerif.title = tousCouverts ? "Matin OK" : `Matin Manquant: ${listesMatin.filter(l => !postesCouvertsCeJour.has(l)).join(', ')}`;
+                     if (new Date(annee, mois, jour).getDay() % 6 === 0) tdVerif.classList.add('weekend');
+                     else tdVerif.classList.remove('weekend');
+                 }
+             }
+             updateVerifCombineMatin(); // Initial call
+
+            // Verification Row Soir
+            const trVerifSoir = document.createElement('tr'); trVerifSoir.classList.add("verification-row", "verif-soir"); trVerifSoir.setAttribute('id', 'verif-comb-soir');
+            const tdLabelVerifSoir = document.createElement('td'); tdLabelVerifSoir.textContent = "Couv. Soir"; trVerifSoir.appendChild(tdLabelVerifSoir);
+            for (let jour = 1; jour <= nombreJours; jour++) { const tdVerif = document.createElement('td'); if (new Date(annee, mois, jour).getDay() % 6 === 0) tdVerif.classList.add('weekend'); trVerifSoir.appendChild(tdVerif); }
+            tbody.appendChild(trVerifSoir);
+
+             function updateVerifCombineSoir() {
+                 let joursNonCouverts = 0; const row = document.getElementById('verif-comb-soir'); if (!row) return;
+                 for (let jour = 1; jour <= nombreJours; jour++) {
+                     const tdVerif = row.cells[jour]; if (!tdVerif) continue; // Index 1 is the first day cell
+                     const postesCouvertsCeJour = new Set();
+                     collaborateurs.forEach(c => {
+                         // Ensure global data exists before accessing
+                         if (globalEmploiDuTempsSoir && globalEmploiDuTempsSoir[c]) {
+                              const poste = globalEmploiDuTempsSoir[c]?.[jour - 1];
+                              if (poste && poste !== 'REPOS') postesCouvertsCeJour.add(poste);
+                         }
+                     });
+                     const tousCouverts = postesCouvertsCeJour.size === aptitudesSoir.length; if (!tousCouverts) joursNonCouverts++;
+                     tdVerif.textContent = tousCouverts ? "✔" : "✘";
+                     tdVerif.classList.remove("ok", "nok");
+                     tdVerif.classList.add(tousCouverts ? "ok" : "nok");
+                     tdVerif.title = tousCouverts ? "Soir OK" : `Soir Manquant: ${aptitudesSoir.filter(l => !postesCouvertsCeJour.has(l)).join(', ')}`;
+                     if (new Date(annee, mois, jour).getDay() % 6 === 0) tdVerif.classList.add('weekend');
+                     else tdVerif.classList.remove('weekend');
+                 }
+             }
+            updateVerifCombineSoir(); // Initial call
+
+            // Collaborator Rows
+            collaborateurs.forEach(collaborateur => {
+                const tr = document.createElement('tr');
+                const tdNom = document.createElement('td'); tdNom.textContent = collaborateur; tr.appendChild(tdNom);
+                for (let jour = 1; jour <= nombreJours; jour++) {
+                    const td = document.createElement('td');
+                    td.setAttribute('id', `cell-comb-${collaborateur}-${jour}`);
+                    td.dataset.collaborateur = collaborateur; td.dataset.jour = jour.toString(); // Ensure jour is stored as string
+
+                     // Use the global data which might have been loaded or freshly generated
+                     const assignMatin = globalEmploiDuTempsMatin[collaborateur]?.[jour - 1];
+                     const assignSoir = globalEmploiDuTempsSoir[collaborateur]?.[jour - 1];
+                     updateCombinedCell(td, assignMatin, assignSoir); // Creates content & attaches D&D listeners
+
+                    const jourDate = new Date(annee, mois, jour);
+                    if (jourDate.getDay() === 0 || jourDate.getDay() === 6) {
+                        td.classList.add('weekend');
+                    }
+
+                    td.classList.add('editable'); // Style for hover & click editing
+                    td.onclick = handleSoirCellClick; // Attach click listener for Soir editing
+
+                    // *** D&D: Attach drop zone listeners ***
+                    td.addEventListener('dragover', handleDragOver);
+                    td.addEventListener('dragleave', handleDragLeave);
+                    td.addEventListener('drop', handleDrop);
+
+                    tr.appendChild(td);
+                }
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- Helper MAJ Cellule Combinée ---
+        function updateCombinedCell(tdElement, assignMatin, assignSoir) {
+            let title = `${tdElement.dataset.collaborateur} - Jour ${tdElement.dataset.jour}:\n`;
+            let hasContent = false;
+            tdElement.innerHTML = ''; // Clear previous content and listeners on inner divs
+
+            const addDraggableDiv = (type, value) => {
+                const div = document.createElement('div');
+                div.classList.add(type === 'matin' ? 'assign-matin' : 'assign-soir');
+                div.textContent = value;
+                div.draggable = true; // *** D&D: Make the div draggable ***
+                div.addEventListener('dragstart', handleDragStart); // *** D&D: Attach dragstart listener ***
+                div.addEventListener('dragend', handleDragEnd); // *** D&D: Attach dragend listener ***
+                tdElement.appendChild(div);
+                title += `${type === 'matin' ? 'Matin' : 'Soir'}: ${value}\n`;
+                hasContent = true;
+            };
+
+            const addReposSpan = (explicitText = "X") => {
+                 const span = document.createElement('span');
+                 span.classList.add('repos');
+                 span.textContent = explicitText;
+                 tdElement.appendChild(span);
+                 hasContent = true;
+            };
+
+             // Determine display logic
+             const reposMatin = (assignMatin === 'REPOS');
+             const reposSoir = (assignSoir === 'REPOS');
+             const workMatin = assignMatin && !reposMatin;
+             const workSoir = assignSoir && !reposSoir;
+
+            if (reposMatin && reposSoir) {
+                addReposSpan(); // Single X for full day repo
+                title += "Matin: REPOS\nSoir: REPOS";
+            } else {
+                 if (workMatin) {
+                     addDraggableDiv('matin', assignMatin);
+                 } else if (reposMatin) {
+                      addReposSpan(); // Display X for morning repo
+                      title += "Matin: REPOS\n";
+                 } else {
+                      title += "Matin: Libre\n";
+                 }
+
+                 if (workSoir) {
+                      addDraggableDiv('soir', assignSoir);
+                 } else if (reposSoir) {
+                      // Only add a second X if morning wasn't already repo
+                      if (!reposMatin) addReposSpan();
+                      title += "Soir: REPOS";
+                 } else {
+                      title += "Soir: Libre";
+                 }
+            }
+
+            if (!hasContent) {
+                tdElement.innerHTML = '&nbsp;'; // Keep empty cells non-breaking
+            }
+             tdElement.title = title.trim();
+        }
+
+
+        // --- *** D&D: Fonctions de gestion du Drag and Drop *** ---
+
+        let draggedElement = null; // Pour suivre l'élément en cours de glissement
+
+        function handleDragStart(event) {
+             // Ne pas démarrer le drag si on clique sur un bouton à l'intérieur (au cas où)
+              if (event.target.tagName === 'BUTTON') {
+                   event.preventDefault();
+                   return;
+              }
+             // Ensure we are dragging the DIV, not the TD
+            if (!event.target.classList.contains('assign-matin') && !event.target.classList.contains('assign-soir')) {
+                // console.log("Drag prevented: Target is not a draggable assignment div.");
+                event.preventDefault();
+                return;
+            }
+
+
+            draggedElement = event.target; // La div .assign-matin ou .assign-soir
+            const tdSource = draggedElement.closest('td');
+            if (!tdSource) return; // Sécurité
+
+            const sourceCollab = tdSource.dataset.collaborateur;
+            const sourceJour = tdSource.dataset.jour; // Ceci est une string
+            const type = draggedElement.classList.contains('assign-matin') ? 'matin' : 'soir';
+            const value = draggedElement.textContent;
+
+            // *** Modification dataTransfer: séparer jour et reste des données ***
+            const dataPayload = JSON.stringify({ sourceCollab, type, value });
+            try {
+                 event.dataTransfer.setData('text/plain', sourceJour); // Stocke le jour source en texte
+                 event.dataTransfer.setData('application/json', dataPayload); // Stocke le reste en JSON
+                 event.dataTransfer.effectAllowed = 'move';
+
+                 // Ajouter un style à l'élément glissé (use setTimeout to ensure it applies after drag starts)
+                 setTimeout(() => { if (draggedElement) draggedElement.classList.add('dragging'); }, 0);
+                 console.log(`Drag Start: ${type} ${value} from ${sourceCollab} on day ${sourceJour}`);
+            } catch (e) {
+                 console.error("Error in handleDragStart setData:", e);
+            }
+        }
+
+        function handleDragEnd(event) {
+            // Nettoyer le style de l'élément glissé
+            if (draggedElement) {
+                draggedElement.classList.remove('dragging');
+            }
+             // Enlever les styles des zones de drop potentielles (sécurité)
+            document.querySelectorAll('#tableau-combiné td.drop-allowed').forEach(td => {
+                td.classList.remove('drop-allowed');
+            });
+             // console.log("Drag End"); // Peut être décommenté pour debug
+        }
+
+        // ----- VERSION SIMPLIFIÉE DE handleDragOver POUR TEST -----
+        function handleDragOver(event) {
+            event.preventDefault(); // << TOUJOURS PREVENIR LE DEFAUT POUR AUTORISER LE DROP
+            event.dataTransfer.dropEffect = 'move'; // << TOUJOURS INDIQUER QUE LE DEPLACEMENT EST POSSIBLE
+
+            // Optionnel: Ajouter le style pour voir si la zone est détectée
+            event.currentTarget.classList.add('drop-allowed');
+            // console.log('Simplified Drag Over - Target:', event.currentTarget.id); // Pour voir si le survol est détecté
+        }
+        // ---------------------------------------------------------
+
+        // ----- ANCIENNE VERSION DE handleDragOver (GARDÉE EN COMMENTAIRE) -----
+        /*
+        function handleDragOver(event) {
+            event.preventDefault(); // Nécessaire pour autoriser le drop
+            const targetTd = event.currentTarget;
+            const targetJour = targetTd.dataset.jour; // string
+
+            // Lire le jour source depuis 'text/plain'
+            const sourceJour = event.dataTransfer.getData('text/plain'); // string
+
+            // Validation simple: même jour ?
+            if (sourceJour && sourceJour === targetJour) {
+                 console.log(`Drag Over: Valid target ${targetTd.id} (Day ${targetJour})`); // Log si valide
+                event.dataTransfer.dropEffect = 'move';
+                targetTd.classList.add('drop-allowed');
+            } else {
+                 // console.log(`Drag Over: Invalid target ${targetTd.id} (Day ${targetJour} != Source Day ${sourceJour})`); // Log si invalide
+                event.dataTransfer.dropEffect = 'none';
+                targetTd.classList.remove('drop-allowed');
+            }
+        }
+        */
+        // ----------------------------------------------------------------------
+
+
+
+
+         function handleDragLeave(event) {
+             // Enlever le style quand on quitte une zone potentielle
+              event.currentTarget.classList.remove('drop-allowed');
+              // console.log(`Drag Leave: ${event.currentTarget.id}`); // Log pour debug
+          }
+
+        function handleDrop(event) {
+            event.preventDefault(); // Empêche le navigateur d'ouvrir les données comme un lien
+            const targetTd = event.currentTarget;
+            targetTd.classList.remove('drop-allowed'); // Nettoyer le style
+
+            if (!draggedElement) {
+                console.log("Drop ignored: No element was being dragged.");
+                return; // Nothing is being dragged
+            }
+
+            const targetCollab = targetTd.dataset.collaborateur;
+            const targetJour = targetTd.dataset.jour; // string
+
+            // *** Modification: Récupérer les données séparément ***
+            const sourceJour = event.dataTransfer.getData('text/plain'); // string
+            const dataPayloadString = event.dataTransfer.getData('application/json');
+
+            let payload;
+            try {
+                payload = JSON.parse(dataPayloadString);
+            } catch (e) {
+                console.error("Drop error: Could not parse JSON payload:", dataPayloadString, e);
+                return;
+            }
+
+            // Vérifier si payload est valide
+            if (!payload || !payload.sourceCollab || !payload.type || payload.value === undefined) {
+                 console.error("Drop error: Invalid payload structure:", payload);
+                 return;
+            }
+
+            const { sourceCollab, type, value } = payload;
+
+            console.log("Drop Event:", { targetCollab, targetJour, sourceJour, payload });
+
+
+            // --- Validation du Drop ---
+            if (sourceJour !== targetJour) {
+                console.log("Drop Validation Failed: Different day");
+                return;
+            }
+            if (sourceCollab === targetCollab) {
+                 console.log("Drop Validation Failed: Same cell");
+                 return; // Dropped onto the same cell
+            }
+            // Additional Validation: Check if the target cell already has an assignment of the same type (matin/soir)
+            const edtObject = (type === 'matin') ? globalEmploiDuTempsMatin : globalEmploiDuTempsSoir;
+            const jourIndexTarget = parseInt(targetJour, 10) - 1;
+            const targetExistingValue = edtObject[targetCollab]?.[jourIndexTarget];
+            if (targetExistingValue && targetExistingValue !== 'REPOS') {
+                // Optional: Confirm overwrite or just prevent it
+                if (!confirm(`Remplacer l'affectation "${targetExistingValue}" de ${targetCollab} par "${value}" ?`)) {
+                    console.log("Drop cancelled by user (overwrite confirmation).");
+                    return;
+                }
+                // If overwriting, we might need to handle the replaced value later (e.g., make the source cell take it?)
+                // For now, let's just overwrite.
+                 console.log(`Overwriting existing assignment "${targetExistingValue}" on target cell.`);
+            }
+
+
+             // --- Mise à jour des données globales ---
+            if (!edtObject[sourceCollab] || !edtObject[targetCollab]) {
+                 console.error("Drop Error: Collaborator data missing in global EDT");
+                 return;
+            }
+
+              // Les jours sont des strings, utiliser directement comme index (ou parser en int)
+              const jourIndexSource = parseInt(sourceJour, 10) - 1;
+
+              // 1. Vider la cellule source (set to null)
+              edtObject[sourceCollab][jourIndexSource] = null;
+
+              // 2. Remplir la cellule cible avec la valeur glissée
+              edtObject[targetCollab][jourIndexTarget] = value;
+
+              console.log(`Data updated: ${sourceCollab} day ${sourceJour} -> null | ${targetCollab} day ${targetJour} -> ${value}`);
+
+              // --- Mise à jour de l'UI ---
+              // 3. Mettre à jour la cellule source dans le tableau combiné
+              const sourceTd = document.getElementById(`cell-comb-${sourceCollab}-${sourceJour}`);
+              if (sourceTd) {
+                   const sourceAssignMatin = globalEmploiDuTempsMatin[sourceCollab]?.[jourIndexSource];
+                   const sourceAssignSoir = globalEmploiDuTempsSoir[sourceCollab]?.[jourIndexSource];
+                   updateCombinedCell(sourceTd, sourceAssignMatin, sourceAssignSoir);
+                   console.log("Source cell UI updated");
+              } else { console.warn("Could not find source TD element to update UI"); }
+
+              // 4. Mettre à jour la cellule cible dans le tableau combiné
+              const targetAssignMatin = globalEmploiDuTempsMatin[targetCollab]?.[jourIndexTarget];
+              const targetAssignSoir = globalEmploiDuTempsSoir[targetCollab]?.[jourIndexTarget];
+              updateCombinedCell(targetTd, targetAssignMatin, targetAssignSoir);
+              console.log("Target cell UI updated");
+
+            // 5. Mettre à jour les lignes de vérification ET les tableaux détails
+            if (type === 'matin') {
+                mettreAJourVerificationMatin();
+                updateDetailCellMatin(sourceCollab, sourceJour, null); // jour is string
+                updateDetailCellMatin(targetCollab, targetJour, value); // jour is string
+
+            } else { // type === 'soir'
+                mettreAJourVerificationSoir();
+                updateDetailCellSoir(sourceCollab, sourceJour, null); // jour is string
+                updateDetailCellSoir(targetCollab, targetJour, value); // jour is string
+            }
+
+            // 6. Sauvegarder les changements
+            sauvegarderEDTActuel();
+            cacherMessageInfoChargement();
+
+            // draggedElement = null; // Already handled in dragend
+        }
+
+         // --- *** D&D: Fonctions pour mettre à jour les cellules des tableaux de détails *** ---
+          function updateDetailCellMatin(collaborateur, jour, nouvelleValeur) {
+               // jour is expected to be a string here
+               const cellId = `cell-tableau-emploi-du-temps-${collaborateur}-${jour}`;
+               const td = document.getElementById(cellId);
+               if (td) {
+                   styleCell(td, nouvelleValeur, null); // No specific preference needed for matin styling here
+                   // console.log(`Updated detail cell Matin: ${cellId} with value ${nouvelleValeur}`);
+               } else {
+                    console.warn(`Could not find detail cell Matin: ${cellId}`);
+               }
+          }
+          function updateDetailCellSoir(collaborateur, jour, nouvelleValeur) {
+               // jour is expected to be a string here
+               const cellId = `cell-tableau-emploi-du-temps-soir-${collaborateur}-${jour}`;
+               const td = document.getElementById(cellId);
+               if (td) {
+                   // Need to parse jour to int for preference lookup if prefs are keyed by number
+                   const pref = globalPreferencesSoir[collaborateur]?.[parseInt(jour, 10)];
+                   styleCell(td, nouvelleValeur, pref);
+                   // console.log(`Updated detail cell Soir: ${cellId} with value ${nouvelleValeur}`);
+               } else {
+                   console.warn(`Could not find detail cell Soir: ${cellId}`);
+               }
+          }
+
+
+        // --- ACTIONS & INITIALISATION ---
+        function changerMois() {
+            rafraichirTousLesTableauxEtEDT();
+        }
+        function forcerRegeneration() {
+            if (confirm("Regénérer les plannings ?\n\nCeci écrasera le planning actuellement affiché (et sauvegardé pour ce mois s'il existe). Voulez-vous continuer ?")) {
+                console.log("Forçage de la regénération des plannings Matin, Soir et Combiné...");
+                effacerEDTSauvegardeMoisCourant(false);
+                cacherMessageInfoChargement();
+                rafraichirTousLesTableauxEtEDT(true); // Pass true to force regeneration
+                alert("Plannings Matin, Soir et Combiné regénérés.");
+            }
+        }
+
+        // --- EXPORT PDF (Version corrigée AVEC la licorne) ---
+        function exporterTableauEnPDF(tableId, suffixeNomFichier) {
+            const selectMois = document.getElementById('select-mois');
+            const mois = parseInt(selectMois.value);
+            const nomMois = selectMois.options[selectMois.selectedIndex].text;
+            const annee = anneeActuelle;
+            const tableauElement = document.getElementById(tableId);
+            const loader = document.getElementById('pdf-export-loader');
+            // --- URL du GIF Licorne ---
+            const unicornGifPath = 'https://media.giphy.com/media/e07Ym7eRkSXARDTwxc/giphy.gif?cid=790b76111f6ghj2uz5baky5i7c5x8r9xt10xzy90rcl9zsrl&ep=v1_gifs_search&rid=giphy.gif&ct=g'; // <--- URL Licorne
+
+            if (!tableauElement) {
+                alert(`Tableau avec ID "${tableId}" non trouvé.`);
+                return;
+            }
+            if (typeof html2canvas === 'undefined' || typeof jspdf === 'undefined') {
+                alert("Erreur : Les bibliothèques jsPDF ou html2canvas ne sont pas chargées.");
+                console.error("jsPDF or html2canvas is not defined. Check script tags.");
+                return;
+            }
+
+            const nomFichier = `Planning_${suffixeNomFichier}_${nomMois}_${annee}.pdf`;
+            console.log(`Début export PDF pour: ${nomFichier} (Table: ${tableId})`);
+
+            // --- Gestion de la visibilité des sections repliables ---
+            const parentSection = tableauElement.closest('.section-collapsible');
+            const contenuCollapsible = tableauElement.closest('.contenu-collapsible');
+            let sectionEtaitCachee = false;
+            let contenuStyleOriginal = null;
+            if (parentSection && contenuCollapsible && !parentSection.classList.contains('active')) {
+                 console.log("Section parente repliée détectée, affichage temporaire pour capture...");
+                 sectionEtaitCachee = true;
+                 contenuStyleOriginal = contenuCollapsible.style.display;
+                 parentSection.classList.add('active');
+                 contenuCollapsible.style.display = 'block';
+            }
+
+            // Masquer l'overlay pendant la capture
+            document.body.classList.add('pdf-capture-mode');
+
+            // --- Afficher le loader AVEC la licorne ---
+            if (loader) {
+                 loader.innerHTML = ''; // Vide le contenu précédent
+                 const img = document.createElement('img');
+                 img.src = unicornGifPath;
+                 img.alt = 'Chargement en cours...'; // Texte alternatif important
+
+                 const span = document.createElement('span');
+                 span.textContent = "Export PDF en cours...";
+
+                 loader.appendChild(img);   // Ajoute l'image EN PREMIER
+                 loader.appendChild(span);  // Ajoute le texte ENSUITE
+                 loader.style.display = 'flex'; // Affiche le loader (utilise flex comme défini en CSS)
+            }
+            // --- Fin Affichage Loader ---
+
+            // Utiliser html2canvas pour capturer le tableau
+            html2canvas(tableauElement, {
+                scale: 1.5,
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#ffffff',
+                scrollX: 0, // Utiliser 0 pour html2canvas >= 1.0.0-rc.0
+                scrollY: 0, // Utiliser 0 pour html2canvas >= 1.0.0-rc.0
+                windowWidth: tableauElement.scrollWidth, // Capturer toute la largeur
+                windowHeight: tableauElement.scrollHeight // Capturer toute la hauteur
+            }).then(canvas => {
+                console.log("Canvas créé par html2canvas.");
+                try {
+                    // Créer une instance jsPDF (paysage, points, format A4)
+                    const { jsPDF } = jspdf;
+                    const pdfWidth = 841.89; // A4 landscape width in points
+                    const pdfHeight = 595.28; // A4 landscape height in points
+                    const doc = new jsPDF('l', 'pt', 'a4');
+
+                    const imgWidth = canvas.width;
+                    const imgHeight = canvas.height;
+                    console.log(`Canvas dimensions: ${imgWidth}x${imgHeight}`);
+
+                    const margin = 40; // Marges en points
+                    const availableWidth = pdfWidth - 2 * margin;
+                    const availableHeight = pdfHeight - 2 * margin;
+
+                    // Calculer le ratio pour adapter l'image
+                    const ratio = Math.min(availableWidth / imgWidth, availableHeight / imgHeight);
+                    const finalImgWidth = imgWidth * ratio;
+                    const finalImgHeight = imgHeight * ratio;
+
+                    const posX = margin; // Placer avec la marge gauche
+                    const posY = margin; // Placer avec la marge haute
+
+                    console.log(`Image will be placed at ${posX},${posY} with dimensions ${finalImgWidth}x${finalImgHeight}`);
+
+                    // Ajouter l'image du canvas au PDF
+                    const imgData = canvas.toDataURL('image/png');
+                    doc.addImage(imgData, 'PNG', posX, posY, finalImgWidth, finalImgHeight);
+
+                    // Sauvegarder le PDF
+                    doc.save(nomFichier);
+                    console.log("Export PDF terminé pour:", nomFichier);
+                    alert(`Le fichier ${nomFichier} a été généré.`);
+
+                } catch (pdfError) {
+                    console.error("Erreur lors de la création ou sauvegarde du PDF:", pdfError);
+                    alert("Une erreur est survenue lors de la génération du PDF.");
+                }
+
+            }).catch(err => {
+                console.error("Erreur html2canvas:", err);
+                alert("Erreur lors de la capture du tableau pour l'export PDF.");
+            }).finally(() => {
+                // --- Nettoyage après la capture ---
+                if (sectionEtaitCachee && parentSection && contenuCollapsible) {
+                    console.log("Rétablissement de la visibilité originale de la section.");
+                    // Optionnel : ne pas refermer si l'utilisateur préfère la garder ouverte
+                    // if (!parentSection.classList.contains('keep-active-after-pdf')) {
+                         parentSection.classList.remove('active');
+                         contenuCollapsible.style.display = contenuStyleOriginal;
+                    // }
+                }
+                // Rétablir l'affichage normal
+                document.body.classList.remove('pdf-capture-mode');
+
+                // --- Cacher et vider le loader ---
+                if (loader) {
+                     loader.style.display = 'none'; // Cache le loader
+                     loader.innerHTML = '';       // Vide le contenu pour la prochaine fois
+                }
+                console.log("Loader caché.");
+                // --- Fin Nettoyage Loader ---
+            });
+        }
+
+        // --- FONCTIONS RESET ---
+        function resetDesiderataMois(keyPrefix, nomSection) {
+            if (confirm(`Voulez-vous vraiment effacer tous les désidératats (${nomSection}) pour le mois sélectionné ?`)) {
+                const selectMois = document.getElementById('select-mois'); const mois = parseInt(selectMois.value); localStorage.removeItem(`${keyPrefix}-${mois}`); const annee = anneeActuelle;
+                if (keyPrefix === 'désidératats') genererTableauDesideratatsMatin(mois, annee); else if (keyPrefix === 'désidératats-soir') genererTableauDesideratatsSoir(mois, annee);
+                effacerEDTSauvegardeMoisCourant(false); // Ne pas demander confirmation ici
+                cacherMessageInfoChargement();
+                rafraichirTousLesTableauxEtEDT(true); // Forcer regénération après reset
+                alert(`Désidératats ${nomSection} du mois effacés. Le planning sera regénéré.`); fermerTousMenus();
+            }
+        }
+        function resetCompetencesToutes(keyPrefix, nomSection) {
+            if (confirm(`Voulez-vous vraiment effacer toutes les ${nomSection} pour TOUS les collaborateurs ?`)) {
+                collaborateurs.forEach(c => { localStorage.removeItem(`${keyPrefix}-${c}`); });
+                if (keyPrefix === 'Listes') genererTableauListesMatin(); else if (keyPrefix === 'Aptitudes-Soir') genererTableauAptitudesSoir();
+                 effacerEDTSauvegardeMoisCourant(false); // Ne pas demander confirmation ici
+                 cacherMessageInfoChargement();
+                 rafraichirTousLesTableauxEtEDT(true); // Forcer regénération après reset
+                alert(`${nomSection} effacées. Le planning sera regénéré.`); fermerTousMenus();
+            }
+        }
+        function resetComplet() {
+            if (confirm("ATTENTION : Réinitialisation Complète !\n\nVoulez-vous vraiment effacer TOUS les désidératats (Matin & Soir, tous les mois) ET TOUTES les compétences/aptitudes (Matin & Soir) ?\n\nCeci effacera également TOUS les plannings sauvegardés !\n\nCette action est irréversible.")) {
+                for (let m = 0; m < 12; m++) {
+                    localStorage.removeItem(`désidératats-${m}`);
+                    localStorage.removeItem(`désidératats-soir-${m}`);
+                    localStorage.removeItem(getLocalStorageKeyEDT('matin', m, anneeActuelle));
+                    localStorage.removeItem(getLocalStorageKeyEDT('soir', m, anneeActuelle));
+                }
+                collaborateurs.forEach(c => { localStorage.removeItem(`Listes-${c}`); localStorage.removeItem(`Aptitudes-Soir-${c}`); });
+                rafraichirTousLesTableauxEtEDT(true); // Force regeneration after reset
+                alert("Réinitialisation complète effectuée."); fermerTousMenus();
+            }
+        }
+
+        // --- MODIF: MEMOIRE - Fonctions de sauvegarde/chargement/gestion messages ---
+        function getLocalStorageKeyEDT(type, mois, annee) { return `edt_${type}_${annee}_${mois}`; }
+
+        function sauvegarderEDTActuel() {
+            const selectMois = document.getElementById('select-mois'); const mois = parseInt(selectMois.value); const annee = anneeActuelle;
+            const edtMatinValide = globalEmploiDuTempsMatin && Object.keys(globalEmploiDuTempsMatin).length > 0 && collaborateurs.some(c => globalEmploiDuTempsMatin[c]);
+            const edtSoirValide = globalEmploiDuTempsSoir && Object.keys(globalEmploiDuTempsSoir).length > 0 && collaborateurs.some(c => globalEmploiDuTempsSoir[c]);
+            if (edtMatinValide && edtSoirValide) {
+                try {
+                    const keyMatin = getLocalStorageKeyEDT('matin', mois, annee); const keySoir = getLocalStorageKeyEDT('soir', mois, annee);
+                    localStorage.setItem(keyMatin, JSON.stringify(globalEmploiDuTempsMatin)); localStorage.setItem(keySoir, JSON.stringify(globalEmploiDuTempsSoir));
+                    console.log(`EDT sauvegardé pour ${annee}-${mois}`);
+                } catch (e) { console.error("Erreur lors de la sauvegarde de l'EDT:", e); alert("Erreur lors de la sauvegarde du planning dans le stockage local."); }
+            } else { console.warn("Tentative de sauvegarde d'EDT vides ou invalides. Non sauvegardé."); }
+        }
+
+        function chargerEDTSauvegarde() {
+            const selectMois = document.getElementById('select-mois'); const mois = parseInt(selectMois.value); const annee = anneeActuelle;
+            const keyMatin = getLocalStorageKeyEDT('matin', mois, annee); const keySoir = getLocalStorageKeyEDT('soir', mois, annee);
+            const dataMatin = localStorage.getItem(keyMatin); const dataSoir = localStorage.getItem(keySoir);
+            if (dataMatin && dataSoir) {
+                try {
+                    const parsedMatin = JSON.parse(dataMatin); const parsedSoir = JSON.parse(dataSoir);
+                    // Basic validation: check if they are objects and have some keys
+                    if (typeof parsedMatin === 'object' && parsedMatin !== null && Object.keys(parsedMatin).length > 0 && typeof parsedSoir === 'object' && parsedSoir !== null && Object.keys(parsedSoir).length > 0) {
+                        // Check if saved data contains collaborators currently in the list
+                        const collabSauvegardeMatin = Object.keys(parsedMatin);
+                        const collabSauvegardeSoir = Object.keys(parsedSoir);
+                        // If *some* overlap exists, load it (better than nothing, user might have added/removed collabs)
+                        if (collabSauvegardeMatin.some(c => collaborateurs.includes(c)) || collabSauvegardeSoir.some(c => collaborateurs.includes(c))) {
+                             // Important: Filter/Align loaded data with current collaborators if needed?
+                             // For simplicity now, just load as is. Might need refinement if collaborators change often.
+                             globalEmploiDuTempsMatin = parsedMatin;
+                             globalEmploiDuTempsSoir = parsedSoir;
+                            console.log(`EDT chargé depuis sauvegarde pour ${annee}-${mois}`); return true;
+                        } else {
+                             console.log(`Sauvegarde trouvée pour ${annee}-${mois} mais aucun collaborateur actuel n'est présent dans les données sauvegardées. Sauvegarde ignorée.`);
+                            // Optionally remove the invalid save data
+                            // localStorage.removeItem(keyMatin);
+                            // localStorage.removeItem(keySoir);
+                            return false;
+                        }
+                    } else { console.warn(`Données sauvegardées invalides (vides ou pas objet) trouvées pour ${annee}-${mois}. Ignorées.`); return false; }
+                } catch (e) { console.error(`Erreur lors du parsing de l'EDT sauvegardé pour ${annee}-${mois}:`, e); return false; }
+            }
+            return false; // No saved data found
+        }
+
+
+        function effacerEDTSauvegardeMoisCourant(confirmer = true) {
+            const selectMois = document.getElementById('select-mois'); const mois = parseInt(selectMois.value); const annee = anneeActuelle; const nomMois = selectMois.options[selectMois.selectedIndex].text;
+            const keyMatin = getLocalStorageKeyEDT('matin', mois, annee); const keySoir = getLocalStorageKeyEDT('soir', mois, annee);
+            let doitEffacer = !confirmer;
+            if (confirmer) {
+                if (localStorage.getItem(keyMatin) || localStorage.getItem(keySoir)) { doitEffacer = window.confirm(`Voulez-vous vraiment effacer le planning sauvegardé pour ${nomMois} ${annee} ?\nLe planning devra être regénéré.`); }
+                else { alert(`Aucun planning n'est sauvegardé pour ${nomMois} ${annee}.`); doitEffacer = false; }
+            }
+            if (doitEffacer) {
+                localStorage.removeItem(keyMatin); localStorage.removeItem(keySoir);
+                console.log(`Sauvegarde EDT effacée pour ${annee}-${mois}`);
+                // Reset global variables to avoid showing stale data if user doesn't regenerate
+                globalEmploiDuTempsMatin = {};
+                globalEmploiDuTempsSoir = {};
+                globalPreferencesSoir = {};
+                if (confirmer) { alert(`Planning sauvegardé pour ${nomMois} ${annee} effacé.`); cacherMessageInfoChargement(); fermerTousMenus(); }
+                // Refresh display to show empty/regenerated state
+                // rafraichirTousLesTableauxEtEDT(true); // Avoid forcing regen if user just wanted to clear save
+                rafraichirTousLesTableauxEtEDT(); // Just refresh normally, it will regenerate if needed
+                return true;
+            }
+            return false;
+        }
+
+
+        function afficherMessageInfoChargement() { const divInfo = document.getElementById('message-info-chargement'); if (divInfo) { divInfo.textContent = "Planning chargé depuis la sauvegarde."; divInfo.style.display = 'block'; } }
+        function cacherMessageInfoChargement() { const divInfo = document.getElementById('message-info-chargement'); if (divInfo) { divInfo.style.display = 'none'; } }
+
+        // --- Fonction centrale MAJ ---
+        function rafraichirTousLesTableauxEtEDT(forceRegeneration = false) {
+            const selectMois = document.getElementById('select-mois'); const mois = parseInt(selectMois.value); const annee = anneeActuelle;
+            const nomMoisAnnee = `${selectMois.options[mois].text} ${annee}`; console.log(`Rafraîchissement pour ${nomMoisAnnee}`); cacherMessageInfoChargement();
+            chargerCollaborateurs(); // Load collaborators first
+            // Generate preference/competence tables
+            genererTableauDesideratatsMatin(mois, annee);
+            genererTableauListesMatin();
+            genererTableauDesideratatsSoir(mois, annee);
+            genererTableauAptitudesSoir();
+
+            let edtCharge = false;
+            if (!forceRegeneration) {
+                edtCharge = chargerEDTSauvegarde();
+            }
+
+            if (edtCharge) {
+                console.log("Affichage de l'EDT chargé.");
+                const nombreJours = new Date(annee, mois + 1, 0).getDate();
+                 // Ensure preferences for Soir are loaded correctly for styling/display
+                 const desideratatsSoirKey = `désidératats-soir-${mois}`; const donneesDesideratatsSoir = JSON.parse(localStorage.getItem(desideratatsSoirKey)) || {};
+                 globalPreferencesSoir = {};
+                 collaborateurs.forEach(c => { globalPreferencesSoir[c] = {}; for (let jour = 1; jour <= nombreJours; jour++) { const clePref = `${c}-${jour}-travail`; globalPreferencesSoir[c][jour] = donneesDesideratatsSoir[clePref] || 'indifferent'; } });
+                // Display loaded data
+                afficherUnEmploiDuTemps(globalEmploiDuTempsMatin, mois, annee, nombreJours, {}, 'tableau-emploi-du-temps', 'message-erreur-couverture', listesMatin); // Pass empty preferences for Matin as they are not directly used for styling its display table
+                afficherUnEmploiDuTemps(globalEmploiDuTempsSoir, mois, annee, nombreJours, globalPreferencesSoir, 'tableau-emploi-du-temps-soir', 'message-erreur-couverture-soir', aptitudesSoir);
+                genererTableauCombine(globalEmploiDuTempsMatin, globalEmploiDuTempsSoir, mois, annee);
+                afficherMessageInfoChargement();
+            } else {
+                console.log("Génération de nouveaux EDT.");
+                 // Reset potentially partially loaded or empty global variables
+                 globalEmploiDuTempsMatin = {};
+                 globalEmploiDuTempsSoir = {};
+                 globalPreferencesSoir = {};
+                // Generate new schedules
+                const edtMatinData = genererEmploiDuTempsMatin(); // This updates globalEmploiDuTempsMatin
+                const edtSoirData = genererEmploiDuTempsSoir();   // This updates globalEmploiDuTempsSoir and globalPreferencesSoir
+                // Generate the combined view from the newly generated global data
+                genererTableauCombine(globalEmploiDuTempsMatin, globalEmploiDuTempsSoir, mois, annee);
+                // Save the newly generated schedule
+                sauvegarderEDTActuel();
+            }
+        }
+
+        function importerDesideratas(typePeriode) { // 'matin' ou 'soir'
+    console.log(`--- Début Import ${typePeriode} dans Fichier Principal ---`); // Log pour distinguer
+    const inputId = `upload-desiderata-${typePeriode}`;
+    const fileInput = document.getElementById(inputId);
+    const localStorageKeyPrefix = (typePeriode === 'matin') ? 'désidératats' : 'désidératats-soir';
+    const tableId = (typePeriode === 'matin') ? 'tableau-désidératats' : 'tableau-désidératats-soir'; // On a besoin de tableId ici
+
+    if (!fileInput || fileInput.files.length === 0) {
+        alert("Veuillez d'abord sélectionner un fichier CSV."); // On garde l'alerte ici
+        console.log("Import annulé: Aucun fichier sélectionné.");
+        return;
+    }
+
+    const file = fileInput.files[0];
+    console.log(`Fichier sélectionné: ${file.name}`);
+    const reader = new FileReader();
+
+    reader.onload = function(event) {
+        console.log("FileReader: Fichier lu.");
+        const fileContent = event.target.result;
+        const lignes = fileContent.split(/\r?\n/);
+        let nomCollaborateur = '';
+        const desideratasImportes = {};
+        let erreurs = [];
+
+        // --- Définitions avec portée corrigée ---
+        let mois;
+        let annee;
+        let nombreJoursMois;
+        const selectMois = document.getElementById('select-mois');
+
+        if (!selectMois) {
+             console.error("ERREUR FATALE: select#select-mois non trouvé !");
+             erreurs.push("Erreur interne: Configuration page invalide (select-mois).");
+        } else {
+            mois = parseInt(selectMois.value);
+            annee = anneeActuelle; // Assurez-vous que anneeActuelle est définie globalement
+            if (typeof mois === 'number' && !isNaN(mois) && annee) {
+                 try {
+                      nombreJoursMois = new Date(annee, mois + 1, 0).getDate();
+                      console.log(`Calcul jours pour ${annee}-${mois + 1}: ${nombreJoursMois}`);
+                 } catch(e) {
+                      console.error(`ERREUR calcul nombre jours: ${e}`);
+                      erreurs.push("Erreur interne calcul nombre jours.");
+                 }
+            } else {
+                erreurs.push("Mois/Année invalide.");
+            }
+        }
+        // --- Fin définitions ---
+
+        // --- Validation et Parsing ---
+        if (lignes.length < 3) {
+            erreurs.push("Format fichier: Moins de 3 lignes.");
+        } else if (!nombreJoursMois) {
+             // Ne pas parser si on n'a pas pu calculer le nb de jours ou si mois/annee invalide
+             erreurs.push("Impossible de parser: nombre de jours ou mois/année inconnu.");
+        } else {
+             // --- Parsing logic ---
+             // 1. Nom Collaborateur
+             const premiereLigne = lignes[0].trim();
+             if (premiereLigne.toLowerCase().startsWith('collaborateur:')) {
+                 nomCollaborateur = premiereLigne.substring('collaborateur:'.length).trim();
+                 console.log(`Collaborateur trouvé: "${nomCollaborateur}"`);
+                 // Assurez-vous que 'collaborateurs' est bien défini globalement
+                 if (!collaborateurs || !collaborateurs.includes(nomCollaborateur)) {
+                     erreurs.push(`Collaborateur "${nomCollaborateur}" inconnu.`);
+                 }
+             } else {
+                 erreurs.push("Format fichier: Ligne 1 incorrecte (Collaborateur: Nom).");
+             }
+
+             // 2. Header (optionnel)
+             const header = lignes[1].trim().toLowerCase();
+             if (header !== 'jour,statut') {
+                 console.warn(`Header CSV inattendu: "${lignes[1].trim()}"`);
+             }
+
+             // 3. Données Jour/Statut
+             console.log("Parsing des jours...");
+             for (let i = 2; i < lignes.length; i++) {
+                 const ligne = lignes[i].trim();
+                 if (ligne === '') continue;
+                 const parts = ligne.split(',');
+                 if (parts.length !== 2) {
+                     erreurs.push(`Ligne ${i + 1}: Format incorrect.`);
+                     continue;
+                 }
+                 const jourStr = parts[0].trim();
+                 const statutStr = parts[1].trim().toUpperCase();
+                 const jour = parseInt(jourStr, 10);
+                 // Utilisation de nombreJoursMois
+                 if (isNaN(jour) || jour < 1 || jour > nombreJoursMois) {
+                     erreurs.push(`Ligne ${i + 1}: Jour ${jourStr} invalide (max ${nombreJoursMois}).`);
+                     continue;
+                 }
+                 let statutFinal;
+                 if (statutStr === 'V') { statutFinal = 'travailler'; }
+                 else if (statutStr === 'X') { statutFinal = 'repos'; }
+                 else if (statutStr === '?') { statutFinal = 'indifferent'; }
+                 else {
+                     erreurs.push(`Ligne ${i + 1}: Statut ${parts[1].trim()} invalide.`);
+                     continue;
+                 }
+                 desideratasImportes[jour] = statutFinal;
+             }
+             console.log(`Fin parsing: ${Object.keys(desideratasImportes).length} jours lus.`);
+        }
+        // --- Fin Validation et Parsing ---
+
+        const erreursBloquantes = erreurs.filter(e => e.includes("inconnu") || e.includes("incorrecte") || e.includes("Impossible") || e.includes("invalide") || e.includes("Erreur interne"));
+
+        // Vérifier si on peut continuer
+        if (nomCollaborateur && typeof mois === 'number' && nombreJoursMois && erreursBloquantes.length === 0) {
+            console.log(`Application pour "${nomCollaborateur}"...`);
+            // Afficher les avertissements non bloquants (erreurs de parsing de ligne par ex)
+             const avertissements = erreurs.filter(e => !erreursBloquantes.includes(e));
+             if (avertissements.length > 0) {
+                 alert("Importation terminée avec des avertissements :\n\n" + avertissements.join("\n"));
+             }
+
+            // Mise à jour LocalStorage
+            try {
+                const localStorageKey = `${localStorageKeyPrefix}-${mois}`; // mois est accessible
+                console.log(`Clé LS: ${localStorageKey}`);
+                let donneesActuelles = JSON.parse(localStorage.getItem(localStorageKey)) || {};
+                let changements = 0;
+                // nombreJoursMois est accessible
+                for (let jour = 1; jour <= nombreJoursMois; jour++) {
+                    const cleTravail = `${nomCollaborateur}-${jour}-travail`;
+                    if (desideratasImportes.hasOwnProperty(jour)) {
+                        const statutImporte = desideratasImportes[jour];
+                        if (statutImporte === 'indifferent') {
+                            if (donneesActuelles[cleTravail]) { delete donneesActuelles[cleTravail]; changements++; }
+                        } else {
+                            if (donneesActuelles[cleTravail] !== statutImporte) { donneesActuelles[cleTravail] = statutImporte; changements++; }
+                        }
+                    }
+                    // On ne touche pas aux jours non présents dans le fichier importé
+                }
+                console.log(`LS: ${changements} changements détectés.`);
+                if (changements > 0 || (Object.keys(donneesActuelles).length > 0 && Object.keys(desideratasImportes).length === 0)) { // Sauvegarder si changement ou si on vide tout
+                    localStorage.setItem(localStorageKey, JSON.stringify(donneesActuelles));
+                    console.log("LS mis à jour.");
+                }
+                 if (Object.keys(donneesActuelles).length === 0) { // Si vide après modif, on supprime
+                     localStorage.removeItem(localStorageKey);
+                     console.log("LS clé supprimée car vide.");
+                 }
+            } catch (lsError) {
+                console.error(`Erreur LocalStorage: ${lsError}`);
+                alert("Erreur lors de la sauvegarde des préférences.");
+            }
+
+            // Mise à jour de l'interface (avec la logique pour trouver la ligne)
+            const tableau = document.getElementById(tableId);
+            if (tableau) {
+                console.log(`Mise à jour UI Table: ${tableId}`);
+                const tbody = tableau.querySelector('tbody');
+                const rows = tbody.querySelectorAll('tr');
+                let ligneTrouveeUI = false;
+                for (const tr of rows) {
+                    const tdNomCell = tr.querySelector('td:first-child');
+                    // Assurez-vous que cette méthode pour trouver le span est toujours correcte pour votre HTML final
+                    const spanNom = tdNomCell ? tdNomCell.querySelector('span:not(.button-group-desiderata)') : null;
+                    if (spanNom && spanNom.textContent.trim() === nomCollaborateur) {
+                         console.log(`Ligne UI trouvée pour ${nomCollaborateur}`);
+                         ligneTrouveeUI = true;
+                        const selects = tr.querySelectorAll('select');
+                        selects.forEach((select, index) => {
+                            const jour = index + 1;
+                            const statut = desideratasImportes[jour] || 'indifferent';
+                            if (select.value !== statut) {
+                               select.value = statut;
+                               // Assurez-vous que mettreAJourCouleurSelect existe et est correcte
+                               if (typeof mettreAJourCouleurSelect === 'function') {
+                                    mettreAJourCouleurSelect(select);
+                               } else {
+                                    console.warn("Fonction mettreAJourCouleurSelect non trouvée !");
+                               }
+                            } else {
+                                // Optionnel: Forcer le style même si la valeur n'a pas changé
+                                if (typeof mettreAJourCouleurSelect === 'function') {
+                                     mettreAJourCouleurSelect(select);
+                                }
+                            }
+                        });
+                        break; // Stop searching rows
+                    }
+                }
+                 if (!ligneTrouveeUI) console.warn("Ligne UI non trouvée pour", nomCollaborateur);
+            } else {
+                 console.error(`Tableau UI non trouvé: ${tableId}`);
+            }
+
+            // Actions finales si succès
+            if (typeof effacerEDTSauvegardeMoisCourant === 'function') {
+                 effacerEDTSauvegardeMoisCourant(false);
+            } else { console.warn("Fonction effacerEDTSauvegardeMoisCourant non trouvée !");}
+            if (typeof cacherMessageInfoChargement === 'function') {
+                 cacherMessageInfoChargement();
+            } else { console.warn("Fonction cacherMessageInfoChargement non trouvée !");}
+
+            alert(`Désidératats ${typePeriode} pour ${nomCollaborateur} importés avec succès !`);
+
+        } else {
+             // Afficher les erreurs bloquantes
+             console.error("Échec importation:", erreursBloquantes);
+             alert("Échec de l'importation :\n\n" + (erreursBloquantes.length > 0 ? erreursBloquantes.join("\n") : "Erreur inconnue ou collaborateur non trouvé. Vérifiez la console F12."));
+        }
+
+        // Réinitialiser l'input file à la fin
+        if(fileInput) fileInput.value = '';
+    }; // Fin reader.onload
+
+    reader.onerror = function() {
+        alert("Erreur lors de la lecture du fichier.");
+        console.error("FileReader error:", reader.error);
+        if(fileInput) fileInput.value = '';
+    };
+
+    console.log("Lancement lecture...");
+    reader.readAsText(file);
+} // Fin importerDesideratas
+
+// --- GESTION DES SECTIONS REPLIABLES ---
+        function setupCollapsibleSections() {
+             const triggers = document.querySelectorAll('.collapsible-trigger');
+             triggers.forEach(trigger => {
+                 const parentSection = trigger.closest('.section-collapsible');
+                 const content = parentSection ? parentSection.querySelector('.contenu-collapsible') : null;
+                 if (!parentSection || !content) return; // Skip if structure is wrong
+
+                 // Check initial state from class 'active'
+                 const isActive = parentSection.classList.contains('active');
+
+                 // Get text content, remove old arrows if any
+                 let initialText = (trigger.firstElementChild && trigger.firstElementChild.nodeType === Node.TEXT_NODE)
+                                  ? trigger.firstElementChild.textContent.trim() // Get text before potential arrow span
+                                  : trigger.textContent.replace(/[\u25BC\u25B2▾▴]/g, '').trim(); // Fallback, clean text
+
+                 // Update trigger HTML with correct arrow (inside a span for styling)
+                 trigger.innerHTML = `${initialText} <span class="arrow">${isActive ? '&#x25B2;' : '&#x25BC;'}</span>`;
+                // Set initial display state of content
+                 content.style.display = isActive ? 'block' : 'none';
+
+                 trigger.addEventListener('click', function() {
+                     const section = this.closest('.section-collapsible'); if (!section) return;
+                     const cont = section.querySelector('.contenu-collapsible'); if (!cont) return;
+                     const arrowSpan = this.querySelector('.arrow');
+
+                     section.classList.toggle('active');
+                     const isOpen = section.classList.contains('active');
+
+                     // Update arrow
+                     if (arrowSpan) arrowSpan.innerHTML = isOpen ? '&#x25B2;' : '&#x25BC;';
+                     // Toggle display
+                      cont.style.display = isOpen ? 'block' : 'none';
+                 });
+             });
+         }
+
+        // --- Initialisation ---
+        document.addEventListener('DOMContentLoaded', () => {
+            anneeActuelle = new Date().getFullYear();
+            chargerCollaborateurs(); // Charge la liste des collaborateurs en premier
+            const maintenant = new Date(); const moisActuel = maintenant.getMonth();
+            const selectMois = document.getElementById('select-mois');
+            if (selectMois) { selectMois.value = moisActuel; }
+
+            rafraichirTousLesTableauxEtEDT(); // Génère les tables et EDT initiaux
+            setupCollapsibleSections(); // Met en place la logique de repli
+
+            const overlay = document.getElementById('overlay-menus');
+            if (overlay) overlay.addEventListener('click', fermerTousMenus);
+
+            // Fermer les menus si on clique en dehors
+            window.addEventListener('click', function(event) {
+                const isClickInsideMenu = event.target.closest('.menu-content');
+                const isClickOnToggler = event.target.closest('.menu-btn') || event.target.closest('.menu-reset-btn');
+                const isOverlayVisible = document.getElementById('overlay-menus')?.classList.contains('show');
+
+                if (isOverlayVisible && !isClickInsideMenu && !isClickOnToggler) {
+                    fermerTousMenus();
+                }
+            });
+        });
+
+        // --- AJOUT PWA: ENREGISTREMENT DU SERVICE WORKER ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => { // Attend que la page soit chargée
+                navigator.serviceWorker.register('./sw.js') // Chemin vers votre sw.js
+                    .then(registration => {
+                        console.log('Service Worker enregistré avec succès ! Portée:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.error('Échec de l\'enregistrement du Service Worker:', error);
+                    });
+            });
+        } else {
+            console.log('Service Worker non supporté par ce navigateur.');
+        }
+        // --- FIN ENREGISTREMENT SW ---
+
+    </script>
+</body>
+</html>
